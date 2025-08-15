@@ -150,11 +150,11 @@
   }
 
   .nav-link {
-    @apply flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-violet-50 hover:text-violet-600 transition-colors;
+    @apply flex items-center px-4 py-3 text-sidebar-foreground rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors;
   }
 
   .nav-link.active {
-    @apply bg-violet-50 text-violet-600;
+    @apply bg-sidebar-accent text-sidebar-accent-foreground;
   }
 
   .btn-primary {
@@ -178,11 +178,11 @@
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+    @apply bg-card rounded-xl shadow-sm border border-border p-6;
   }
 
   .stat-card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+    @apply bg-card rounded-xl shadow-sm border border-border p-6;
   }
 
   .attendance-status-present {

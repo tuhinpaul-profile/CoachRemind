@@ -26,15 +26,15 @@ export function Sidebar() {
   const [location] = useLocation();
 
   return (
-    <div className="w-64 bg-white shadow-lg border-r border-gray-200 sidebar-transition">
-      <div className="p-6 border-b border-gray-200">
+    <div className="w-64 bg-sidebar shadow-lg border-r border-sidebar-border sidebar-transition">
+      <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">Excellence Coaching</h1>
-            <p className="text-sm text-gray-500">Student Management System</p>
+            <h1 className="text-lg font-semibold text-sidebar-foreground">Excellence Coaching</h1>
+            <p className="text-sm text-muted-foreground">Student Management System</p>
           </div>
         </div>
       </div>
@@ -48,13 +48,13 @@ export function Sidebar() {
             return (
               <li key={item.path}>
                 <Link href={item.path}>
-                  <a 
+                  <span 
                     className={`nav-link ${isActive ? 'active' : ''}`}
                     data-testid={`nav-${item.path.replace('/', '') || 'dashboard'}`}
                   >
                     <Icon className="w-5 h-5 mr-3" />
                     {item.label}
-                  </a>
+                  </span>
                 </Link>
               </li>
             );

@@ -18,6 +18,7 @@ import { StorageService } from "@/lib/storage";
 import { EmailService } from "@/lib/emailService";
 import { initializeSampleData } from "@/lib/sampleData";
 import { useToast, ToastContainer } from "@/hooks/useToast";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -66,7 +67,7 @@ function Router() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title={pageTitle} subtitle={pageSubtitle} />
@@ -127,13 +128,15 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Router />
-        <Toaster />
-        <ToastContainer toasts={toasts} onRemove={removeToast} />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+          <ToastContainer toasts={toasts} onRemove={removeToast} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
