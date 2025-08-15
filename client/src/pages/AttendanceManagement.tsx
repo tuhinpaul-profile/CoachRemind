@@ -129,6 +129,11 @@ export function AttendanceManagement() {
   };
 
   const markAllPresent = () => {
+    if (gradeFilter === 'all') {
+      toast.error('Please select a specific grade to mark attendance');
+      return;
+    }
+
     const updatedAttendance = {
       ...attendance,
       [selectedDate]: {
@@ -143,10 +148,15 @@ export function AttendanceManagement() {
 
     setAttendance(updatedAttendance);
     StorageService.setAttendance(updatedAttendance);
-    toast.success(`All ${filteredStudents.length} visible students marked present`);
+    toast.success(`All ${filteredStudents.length} students in ${gradeFilter} marked present`);
   };
 
   const markAllAbsent = () => {
+    if (gradeFilter === 'all') {
+      toast.error('Please select a specific grade to mark attendance');
+      return;
+    }
+
     const updatedAttendance = {
       ...attendance,
       [selectedDate]: {
@@ -161,24 +171,30 @@ export function AttendanceManagement() {
 
     setAttendance(updatedAttendance);
     StorageService.setAttendance(updatedAttendance);
-    toast.warning(`All ${filteredStudents.length} visible students marked absent`);
+    toast.warning(`All ${filteredStudents.length} students in ${gradeFilter} marked absent`);
   };
 
   const saveAttendance = async () => {
+    if (gradeFilter === 'all') {
+      toast.error('Please select a specific grade to save attendance');
+      return;
+    }
+
     try {
-      console.log('Saving attendance:', attendance);
+      console.log('Saving attendance for grade:', gradeFilter);
       StorageService.setAttendance(attendance);
       StorageService.addNotification({
         type: 'attendance',
-        message: `Attendance saved for ${new Date(selectedDate).toLocaleDateString()}`,
+        message: `Attendance saved for ${gradeFilter} on ${new Date(selectedDate).toLocaleDateString()}`,
         read: false
       });
       
-      // Count how many students have attendance marked for this date
+      // Count how many students have attendance marked for this date in the filtered grade
       const dayAttendance = attendance[selectedDate] || {};
-      const markedCount = Object.keys(dayAttendance).length;
+      const filteredStudentIds = filteredStudents.map(s => s.id);
+      const markedCount = filteredStudentIds.filter(id => dayAttendance[id]).length;
       
-      toast.success(`Attendance saved successfully! ${markedCount} students recorded for ${new Date(selectedDate).toLocaleDateString()}`);
+      toast.success(`Attendance saved for ${gradeFilter}! ${markedCount} students recorded for ${new Date(selectedDate).toLocaleDateString()}`);
     } catch (error) {
       console.error('Error saving attendance:', error);
       toast.error('Failed to save attendance');
@@ -221,13 +237,40 @@ export function AttendanceManagement() {
               className="w-auto"
               data-testid="input-attendance-date"
             />
-            <button onClick={markAllPresent} className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors" data-testid="button-mark-all-present">
+            <button 
+              onClick={markAllPresent} 
+              disabled={gradeFilter === 'all'}
+              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                gradeFilter === 'all' 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`} 
+              data-testid="button-mark-all-present"
+            >
               Mark All Present
             </button>
-            <button onClick={markAllAbsent} className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition-colors" data-testid="button-mark-all-absent">
+            <button 
+              onClick={markAllAbsent} 
+              disabled={gradeFilter === 'all'}
+              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                gradeFilter === 'all' 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`} 
+              data-testid="button-mark-all-absent"
+            >
               Mark All Absent
             </button>
-            <button onClick={saveAttendance} className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-md transition-colors" data-testid="button-save-attendance">
+            <button 
+              onClick={saveAttendance} 
+              disabled={gradeFilter === 'all'}
+              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                gradeFilter === 'all' 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-violet-600 hover:bg-violet-700 text-white'
+              }`} 
+              data-testid="button-save-attendance"
+            >
               Save Attendance
             </button>
           </div>
