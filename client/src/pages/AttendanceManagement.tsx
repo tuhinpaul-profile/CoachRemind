@@ -196,6 +196,23 @@ export function AttendanceManagement() {
 
   const grades = ['6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
+  // Student image function (same as StudentManagement)
+  const getStudentImage = (studentId: number) => {
+    const imageOptions = [
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1463453091185-61582044d556?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1489980557514-251d61e3eeb6?w=100&h=100&fit=crop&crop=face'
+    ];
+    return imageOptions[studentId % imageOptions.length];
+  };
+
   return (
     <div className="space-y-6">
       <div className="card">
@@ -209,15 +226,15 @@ export function AttendanceManagement() {
               className="w-auto"
               data-testid="input-attendance-date"
             />
-            <Button onClick={markAllPresent} className="bg-green-600 hover:bg-green-700 text-white" data-testid="button-mark-all-present">
+            <button onClick={markAllPresent} className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors" data-testid="button-mark-all-present">
               Mark All Present
-            </Button>
-            <Button onClick={markAllAbsent} className="bg-red-600 hover:bg-red-700 text-white" data-testid="button-mark-all-absent">
+            </button>
+            <button onClick={markAllAbsent} className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition-colors" data-testid="button-mark-all-absent">
               Mark All Absent
-            </Button>
-            <Button onClick={saveAttendance} variant="default" data-testid="button-save-attendance">
+            </button>
+            <button onClick={saveAttendance} className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-md transition-colors" data-testid="button-save-attendance">
               Save Attendance
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -283,10 +300,23 @@ export function AttendanceManagement() {
                 data-testid={`attendance-item-${student.id}`}
               >
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center">
-                    <span className="text-violet-600 font-medium text-sm">
-                      {student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                    </span>
+                  <div className="relative w-12 h-12 rounded-full overflow-hidden bg-violet-100 flex-shrink-0">
+                    <img
+                      src={getStudentImage(student.id)}
+                      alt={student.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-violet-100 rounded-full flex items-center justify-center" style={{display: 'none'}}>
+                      <span className="text-violet-600 font-medium text-sm">
+                        {student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <div className="font-medium text-gray-900">{student.name}</div>
@@ -294,26 +324,30 @@ export function AttendanceManagement() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button
+                  <button
                     onClick={() => markAttendance(student.id, 'present')}
-                    variant={status === 'present' ? 'default' : 'outline'}
-                    size="sm"
-                    className={`${status === 'present' ? 'bg-green-600 hover:bg-green-700 text-white' : 'border-green-600 text-green-600 hover:bg-green-50'}`}
+                    className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      status === 'present' 
+                        ? 'bg-green-600 hover:bg-green-700 text-white' 
+                        : 'border border-green-600 text-green-600 hover:bg-green-50 bg-white'
+                    }`}
                     data-testid={`button-present-${student.id}`}
                   >
                     <Check className="w-4 h-4 mr-1" />
                     Present
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     onClick={() => markAttendance(student.id, 'absent')}
-                    variant={status === 'absent' ? 'default' : 'outline'}
-                    size="sm"
-                    className={`${status === 'absent' ? 'bg-red-600 hover:bg-red-700 text-white' : 'border-red-600 text-red-600 hover:bg-red-50'}`}
+                    className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      status === 'absent' 
+                        ? 'bg-red-600 hover:bg-red-700 text-white' 
+                        : 'border border-red-600 text-red-600 hover:bg-red-50 bg-white'
+                    }`}
                     data-testid={`button-absent-${student.id}`}
                   >
                     <X className="w-4 h-4 mr-1" />
                     Absent
-                  </Button>
+                  </button>
                 </div>
               </div>
             );
