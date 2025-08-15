@@ -32,8 +32,11 @@ export function AttendanceManagement() {
 
   useEffect(() => {
     filterStudents();
+  }, [students, searchTerm, gradeFilter]);
+
+  useEffect(() => {
     calculateStats();
-  }, [students, attendance, selectedDate, searchTerm, gradeFilter]);
+  }, [filteredStudents, attendance, selectedDate]);
 
   useEffect(() => {
     paginateStudents();
@@ -161,14 +164,25 @@ export function AttendanceManagement() {
     toast.warning(`All ${filteredStudents.length} visible students marked absent`);
   };
 
-  const saveAttendance = () => {
-    StorageService.setAttendance(attendance);
-    StorageService.addNotification({
-      type: 'attendance',
-      message: `Attendance saved for ${new Date(selectedDate).toLocaleDateString()}`,
-      read: false
-    });
-    toast.success('Attendance saved successfully');
+  const saveAttendance = async () => {
+    try {
+      console.log('Saving attendance:', attendance);
+      StorageService.setAttendance(attendance);
+      StorageService.addNotification({
+        type: 'attendance',
+        message: `Attendance saved for ${new Date(selectedDate).toLocaleDateString()}`,
+        read: false
+      });
+      
+      // Count how many students have attendance marked for this date
+      const dayAttendance = attendance[selectedDate] || {};
+      const markedCount = Object.keys(dayAttendance).length;
+      
+      toast.success(`Attendance saved successfully! ${markedCount} students recorded for ${new Date(selectedDate).toLocaleDateString()}`);
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      toast.error('Failed to save attendance');
+    }
   };
 
   const getAttendanceStatus = (studentId: number) => {
