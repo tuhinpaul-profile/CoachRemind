@@ -5,6 +5,7 @@ import { Student, Fee } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { AddStudentModal } from "@/components/Modals/AddStudentModal";
 import { StudentDetailsModal } from "@/components/Modals/StudentDetailsModal";
 import { AdminStudentModal } from "@/components/Modals/AdminStudentModal";
@@ -33,6 +34,10 @@ export function StudentManagement() {
   const [selectedStudents, setSelectedStudents] = useState<Set<number>>(new Set());
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [selectedStudentForAction, setSelectedStudentForAction] = useState<Student | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -128,11 +133,11 @@ export function StudentManagement() {
       toast.error('Please select students to delete');
       return;
     }
+    setBulkDeleteDialogOpen(true);
+  };
 
-    if (!confirm(`Are you sure you want to delete ${selectedStudents.size} students? This will also remove all their records.`)) {
-      return;
-    }
-
+  const confirmBulkDelete = () => {
+    const selectedCount = selectedStudents.size;
     const updatedStudents = students.filter(s => !selectedStudents.has(s.id));
     const updatedFees = fees.filter(f => !selectedStudents.has(f.studentId));
     
@@ -150,8 +155,9 @@ export function StudentManagement() {
     StorageService.setFees(updatedFees);
     StorageService.setAttendance(attendance);
     setSelectedStudents(new Set());
+    setBulkDeleteDialogOpen(false);
 
-    toast.success(`${selectedStudents.size} students deleted successfully`);
+    toast.success(`${selectedCount} students deleted successfully`);
   };
 
   const handleAddStudent = (studentData: Omit<Student, 'id'>) => {
@@ -189,18 +195,24 @@ export function StudentManagement() {
   };
 
   const handleDeleteStudent = (studentId: number) => {
-    if (!confirm('Are you sure you want to delete this student? This will also remove all their records.')) {
-      return;
-    }
-
     const student = students.find(s => s.id === studentId);
-    const updatedStudents = students.filter(s => s.id !== studentId);
-    const updatedFees = fees.filter(f => f.studentId !== studentId);
+    if (!student) return;
+    
+    setSelectedStudentForAction(student);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteStudent = () => {
+    if (!selectedStudentForAction) return;
+
+    const student = selectedStudentForAction;
+    const updatedStudents = students.filter(s => s.id !== student.id);
+    const updatedFees = fees.filter(f => f.studentId !== student.id);
     
     // Remove from attendance records
     const attendance = StorageService.getAttendance();
     Object.keys(attendance).forEach(date => {
-      delete attendance[date][studentId];
+      delete attendance[date][student.id];
     });
 
     setStudents(updatedStudents);
@@ -208,11 +220,13 @@ export function StudentManagement() {
     StorageService.setStudents(updatedStudents);
     StorageService.setFees(updatedFees);
     StorageService.setAttendance(attendance);
+    setDeleteDialogOpen(false);
+    setSelectedStudentForAction(null);
 
-    toast.success(`Student ${student?.name} deleted successfully`);
+    toast.success(`Student ${student.name} deleted successfully`);
     StorageService.addNotification({
       type: 'info',
-      message: `Student ${student?.name} removed from system`,
+      message: `Student ${student.name} removed from system`,
       read: false
     });
   };
@@ -221,12 +235,20 @@ export function StudentManagement() {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
 
+    setSelectedStudentForAction(student);
+    setStatusDialogOpen(true);
+  };
+
+  const confirmToggleStatus = () => {
+    if (!selectedStudentForAction) return;
+
+    const student = selectedStudentForAction;
     const newStatus = student.status === 'active' ? 'inactive' : 'active';
 
     if (isAdmin) {
       // Admin can directly update status
       const updatedStudents = students.map(s => {
-        if (s.id === studentId) {
+        if (s.id === student.id) {
           return { ...s, status: newStatus as 'active' | 'inactive' };
         }
         return s;
@@ -249,6 +271,9 @@ export function StudentManagement() {
 
       toast.success(`Status change submitted for admin approval: ${student.name} to be marked as ${newStatus}`);
     }
+    
+    setStatusDialogOpen(false);
+    setSelectedStudentForAction(null);
   };
 
   // Admin handlers for comprehensive student management
@@ -1216,6 +1241,133 @@ export function StudentManagement() {
         onSave={handleAdminSaveStudent}
         mode={adminModalMode}
       />
+
+      {/* Enrollment Status Change Confirmation Dialog */}
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent data-testid="status-confirmation-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedStudentForAction && (
+                <>
+                  Are you sure you want to change the enrollment status of{' '}
+                  <strong>{selectedStudentForAction.name}</strong> from{' '}
+                  <strong>{selectedStudentForAction.status}</strong> to{' '}
+                  <strong>{selectedStudentForAction.status === 'active' ? 'inactive' : 'active'}</strong>?
+                  {!isAdmin && (
+                    <div className="mt-2 text-amber-600 font-medium">
+                      Note: This change will require admin approval before taking effect.
+                    </div>
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setStatusDialogOpen(false);
+                setSelectedStudentForAction(null);
+              }}
+              data-testid="button-cancel-status-change"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmToggleStatus}
+              data-testid="button-confirm-status-change"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isAdmin ? 'Change Status' : 'Submit for Approval'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Student Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent data-testid="delete-confirmation-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">Delete Student</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedStudentForAction && (
+                <>
+                  Are you sure you want to permanently delete{' '}
+                  <strong>{selectedStudentForAction.name}</strong>?
+                  <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <div className="text-red-800 dark:text-red-200 font-medium text-sm">
+                      ⚠️ This action cannot be undone and will permanently remove:
+                    </div>
+                    <ul className="mt-2 text-red-700 dark:text-red-300 text-sm list-disc list-inside space-y-1">
+                      <li>Student profile and personal information</li>
+                      <li>All attendance records</li>
+                      <li>All fee payment history</li>
+                      <li>Associated notifications and reports</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setSelectedStudentForAction(null);
+              }}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteStudent}
+              data-testid="button-confirm-delete"
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Student
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent data-testid="bulk-delete-confirmation-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">Delete Multiple Students</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete{' '}
+              <strong>{selectedStudents.size} selected students</strong>?
+              <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="text-red-800 dark:text-red-200 font-medium text-sm">
+                  ⚠️ This action cannot be undone and will permanently remove:
+                </div>
+                <ul className="mt-2 text-red-700 dark:text-red-300 text-sm list-disc list-inside space-y-1">
+                  <li>All {selectedStudents.size} student profiles and personal information</li>
+                  <li>All attendance records for these students</li>
+                  <li>All fee payment history for these students</li>
+                  <li>Associated notifications and reports</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => setBulkDeleteDialogOpen(false)}
+              data-testid="button-cancel-bulk-delete"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmBulkDelete}
+              data-testid="button-confirm-bulk-delete"
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete {selectedStudents.size} Students
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
