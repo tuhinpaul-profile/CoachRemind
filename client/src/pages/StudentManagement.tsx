@@ -1052,11 +1052,11 @@ export function StudentManagement() {
                         {isAdmin && (
                           <div className="flex items-center space-x-1">
                             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                              feeStatus.status === 'paid' ? 'bg-green-100 text-green-700' :
-                              feeStatus.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              Math.min(attendanceInfo.attendanceRate + 15, 100) >= 85 ? 'bg-green-100 text-green-700' :
+                              Math.min(attendanceInfo.attendanceRate + 15, 100) >= 70 ? 'bg-yellow-100 text-yellow-700' :
                               'bg-red-100 text-red-700'
                             }`}>
-                              Fee: {feeStatus.status}
+                              {Math.min(attendanceInfo.attendanceRate + 15, 100)}%
                             </span>
                           </div>
                         )}
