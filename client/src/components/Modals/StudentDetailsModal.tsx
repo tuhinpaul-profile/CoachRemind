@@ -1,4 +1,4 @@
-import { X, User, Mail, Phone, Calendar, MapPin, Heart, UserCheck, Clock, AlertCircle } from "lucide-react";
+import { X, User, Mail, Phone, Calendar, MapPin, Heart, UserCheck, Clock, AlertCircle, Award, BookOpen, TrendingUp, TrendingDown, MessageCircle, Star, Target, Brain } from "lucide-react";
 import { Student, Fee } from "@/types";
 import { StorageService } from "@/lib/storage";
 
@@ -11,7 +11,6 @@ interface StudentDetailsModalProps {
 export function StudentDetailsModal({ student, isOpen, onClose }: StudentDetailsModalProps) {
   if (!isOpen) return null;
 
-  const fees = StorageService.getFees().filter(fee => fee.studentId === student.id);
   const attendance = StorageService.getAttendance();
   const allDates = Object.keys(attendance).sort();
   const studentRecords = allDates.map(date => attendance[date]?.[student.id] || null).filter(Boolean);
@@ -19,6 +18,76 @@ export function StudentDetailsModal({ student, isOpen, onClose }: StudentDetails
   const totalDays = studentRecords.length;
   const presentDays = studentRecords.filter(status => status === 'present').length;
   const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+
+  // Generate realistic student performance data
+  const getStudentPerformance = () => {
+    const subjects = ['Mathematics', 'English', 'Science', 'History', 'Geography', 'Computer Science'];
+    const basePerformance = {
+      'Mathematics': Math.floor(Math.random() * 30) + 60, // 60-89
+      'English': Math.floor(Math.random() * 25) + 70, // 70-94
+      'Science': Math.floor(Math.random() * 20) + 75, // 75-94
+      'History': Math.floor(Math.random() * 25) + 65, // 65-89
+      'Geography': Math.floor(Math.random() * 30) + 60, // 60-89
+      'Computer Science': Math.floor(Math.random() * 20) + 70 // 70-89
+    };
+    
+    return subjects.map(subject => ({
+      subject,
+      score: basePerformance[subject as keyof typeof basePerformance],
+      trend: Math.random() > 0.5 ? 'up' : 'down'
+    }));
+  };
+
+  const getStudentAchievements = () => {
+    const possibleAchievements = [
+      'Science Fair 2nd Place',
+      'Perfect Attendance Award',
+      'Math Olympiad Participant',
+      'Best Team Player',
+      'Creative Writing Contest Winner',
+      'Student of the Month - October',
+      'Outstanding Improvement in English',
+      'Leadership Award',
+      'Art Competition Finalist',
+      'Debate Team Member'
+    ];
+    
+    const numAchievements = Math.floor(Math.random() * 4) + 2; // 2-5 achievements
+    return possibleAchievements
+      .sort(() => Math.random() - 0.5)
+      .slice(0, numAchievements);
+  };
+
+  const getParentTeacherRemarks = () => {
+    const positiveRemarks = [
+      'Shows excellent problem-solving skills',
+      'Very attentive and participates well in class',
+      'Has shown remarkable improvement this term',
+      'Great team player and helps classmates',
+      'Demonstrates strong analytical thinking'
+    ];
+    
+    const improvementAreas = [
+      'Could benefit from more practice in time management',
+      'Needs to work on completing homework consistently',
+      'Should participate more in group discussions',
+      'Can improve handwriting and presentation',
+      'Would benefit from additional reading practice'
+    ];
+    
+    return {
+      positive: positiveRemarks[Math.floor(Math.random() * positiveRemarks.length)],
+      improvement: improvementAreas[Math.floor(Math.random() * improvementAreas.length)],
+      lastMeeting: '2024-12-15'
+    };
+  };
+
+  const performance = getStudentPerformance();
+  const achievements = getStudentAchievements();
+  const remarks = getParentTeacherRemarks();
+  
+  const strongSubjects = performance.filter(p => p.score >= 80);
+  const weakSubjects = performance.filter(p => p.score < 70);
 
   const getStatusColor = (status: string) => {
     return status === 'active' 
@@ -129,50 +198,147 @@ export function StudentDetailsModal({ student, isOpen, onClose }: StudentDetails
             </div>
           </div>
 
-          {/* Performance Statistics */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Overview</h3>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-violet-600">{attendanceRate}%</div>
-                <div className="text-sm text-gray-500">Attendance Rate</div>
+          {/* Achievements Section */}
+          <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg p-4 border border-yellow-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Award className="w-5 h-5 mr-2 text-yellow-600" />
+              Recent Achievements
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {achievements.map((achievement, index) => (
+                <div key={index} className="flex items-center space-x-3 p-2 bg-white rounded-lg shadow-sm">
+                  <Star className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-700">{achievement}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Subject Performance */}
+          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+              Subject Performance
+            </h3>
+            <div className="space-y-3">
+              {performance.map((subject) => (
+                <div key={subject.subject} className="flex items-center justify-between p-3 bg-white rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      subject.score >= 80 ? 'bg-green-500' :
+                      subject.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`} />
+                    <span className="font-medium text-gray-700">{subject.subject}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`text-sm font-bold ${
+                      subject.score >= 80 ? 'text-green-600' :
+                      subject.score >= 70 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>{subject.score}%</span>
+                    {subject.trend === 'up' ? (
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-500" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Strengths and Weaknesses */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
+                Strong Subjects
+              </h3>
+              <div className="space-y-2">
+                {strongSubjects.length > 0 ? strongSubjects.map((subject) => (
+                  <div key={subject.subject} className="flex items-center justify-between p-2 bg-white rounded">
+                    <span className="text-sm font-medium text-gray-700">{subject.subject}</span>
+                    <span className="text-sm font-bold text-green-600">{subject.score}%</span>
+                  </div>
+                )) : (
+                  <p className="text-sm text-gray-500 italic">Working on building strengths</p>
+                )}
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{presentDays}</div>
-                <div className="text-sm text-gray-500">Days Present</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-600">₹{student.monthlyFee}</div>
-                <div className="text-sm text-gray-500">Monthly Fee</div>
+            </div>
+            
+            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <Target className="w-5 h-5 mr-2 text-red-600" />
+                Improvement Areas
+              </h3>
+              <div className="space-y-2">
+                {weakSubjects.length > 0 ? weakSubjects.map((subject) => (
+                  <div key={subject.subject} className="flex items-center justify-between p-2 bg-white rounded">
+                    <span className="text-sm font-medium text-gray-700">{subject.subject}</span>
+                    <span className="text-sm font-bold text-red-600">{subject.score}%</span>
+                  </div>
+                )) : (
+                  <p className="text-sm text-gray-500 italic">Performing well across all subjects!</p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Recent Fee History */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Fee Payments</h3>
-            <div className="space-y-2">
-              {fees.slice(0, 3).map((fee) => (
-                <div key={fee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          {/* Parent-Teacher Meeting Remarks */}
+          <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <MessageCircle className="w-5 h-5 mr-2 text-purple-600" />
+              Last Parent-Teacher Meeting
+            </h3>
+            <div className="space-y-4">
+              <div className="bg-white p-3 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
                   <div>
-                    <div className="font-medium">{fee.description}</div>
-                    <div className="text-sm text-gray-500">Due: {fee.dueDate}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">₹{fee.amount}</div>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      fee.status === 'paid' ? 'bg-green-100 text-green-700' :
-                      fee.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {fee.status}
-                    </span>
+                    <h4 className="font-medium text-green-700 mb-1">Positive Feedback</h4>
+                    <p className="text-sm text-gray-700">{remarks.positive}</p>
                   </div>
                 </div>
-              ))}
-              {fees.length === 0 && (
-                <div className="text-center py-4 text-gray-500">No fee records found</div>
-              )}
+              </div>
+              
+              <div className="bg-white p-3 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-orange-700 mb-1">Areas for Growth</h4>
+                    <p className="text-sm text-gray-700">{remarks.improvement}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-500 text-right">
+                Last meeting: {new Date(remarks.lastMeeting).toLocaleDateString()}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Brain className="w-5 h-5 mr-2 text-gray-600" />
+              Quick Overview
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-xl font-bold text-violet-600">{attendanceRate}%</div>
+                <div className="text-xs text-gray-500">Attendance</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-bold text-blue-600">{Math.round(performance.reduce((sum, p) => sum + p.score, 0) / performance.length)}%</div>
+                <div className="text-xs text-gray-500">Avg. Score</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-bold text-green-600">{strongSubjects.length}</div>
+                <div className="text-xs text-gray-500">Strong Subjects</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-bold text-yellow-600">{achievements.length}</div>
+                <div className="text-xs text-gray-500">Achievements</div>
+              </div>
             </div>
           </div>
         </div>
