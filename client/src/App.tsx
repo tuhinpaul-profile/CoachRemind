@@ -11,6 +11,7 @@ import { StudentManagement } from "@/pages/StudentManagement";
 import { AttendanceManagement } from "@/pages/AttendanceManagement";
 import { FeeManagement } from "@/pages/FeeManagement";
 import { Reports } from "@/pages/Reports";
+import { Analytics } from "@/pages/Analytics";
 import { Notifications } from "@/pages/Notifications";
 import { Chatbot } from "@/pages/Chatbot";
 import { Settings } from "@/pages/Settings";
@@ -46,8 +47,12 @@ function Router() {
         subtitle: "Track fee payments and send reminders"
       },
       "/reports": {
-        title: "Reports & Analytics",
+        title: "Reports & Analytics", 
         subtitle: "Generate comprehensive reports and analytics"
+      },
+      "/analytics": {
+        title: "Performance Analytics",
+        subtitle: "Advanced performance trends and risk analysis"
       },
       "/notifications": {
         title: "Automated Notifications",
@@ -100,6 +105,14 @@ function Router() {
               return (
                 <RoleProtectedRoute requiredRole="admin">
                   <Reports />
+                </RoleProtectedRoute>
+              );
+            }} />
+            <Route path="/analytics" component={() => {
+              updatePageInfo("/analytics");
+              return (
+                <RoleProtectedRoute requiredRole="admin">
+                  <Analytics />
                 </RoleProtectedRoute>
               );
             }} />
