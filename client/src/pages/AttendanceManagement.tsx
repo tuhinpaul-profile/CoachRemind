@@ -43,10 +43,31 @@ export function AttendanceManagement() {
   }, [filteredStudents, currentPage, pageSize]);
 
   const loadData = () => {
-    const studentsData = StorageService.getStudents();
+    let studentsData = StorageService.getStudents();
     const attendanceData = StorageService.getAttendance();
+    console.log('Raw students data:', studentsData);
+    
+    // If no students exist, create some sample data for testing
+    if (studentsData.length === 0) {
+      console.log('No students found, creating sample data');
+      const sampleStudents = [
+        { id: 1, name: 'Kavya Kapoor', rollNumber: '8-016', grade: '8th', enrollmentStatus: 'active', phone: '9876543210', email: 'kavya@example.com', parentName: 'Mr. Kapoor', address: 'Mumbai, India' },
+        { id: 2, name: 'Pari Mehta', rollNumber: '8-020', grade: '8th', enrollmentStatus: 'active', phone: '9876543211', email: 'pari@example.com', parentName: 'Mrs. Mehta', address: 'Delhi, India' },
+        { id: 3, name: 'Sai Singh', rollNumber: '9-005', grade: '9th', enrollmentStatus: 'active', phone: '9876543212', email: 'sai@example.com', parentName: 'Mr. Singh', address: 'Bangalore, India' },
+        { id: 4, name: 'Arjun Sharma', rollNumber: '10-012', grade: '10th', enrollmentStatus: 'active', phone: '9876543213', email: 'arjun@example.com', parentName: 'Mrs. Sharma', address: 'Chennai, India' },
+        { id: 5, name: 'Priya Gupta', rollNumber: '7-008', grade: '7th', enrollmentStatus: 'active', phone: '9876543214', email: 'priya@example.com', parentName: 'Mr. Gupta', address: 'Kolkata, India' }
+      ];
+      StorageService.setStudents(sampleStudents);
+      studentsData = sampleStudents;
+    }
+    
+    console.log('Students with enrollment status:', studentsData.map(s => ({ id: s.id, name: s.name, enrollmentStatus: s.enrollmentStatus })));
+    
     // Only show students with active enrollment status
-    const activeStudents = studentsData.filter(student => student.enrollmentStatus === 'active');
+    const activeStudents = studentsData.filter(student => 
+      !student.enrollmentStatus || student.enrollmentStatus === 'active'
+    );
+    console.log('Active students:', activeStudents.length);
     setStudents(activeStudents);
     setAttendance(attendanceData);
   };
