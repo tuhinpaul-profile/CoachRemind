@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, MessageSquare, Settings, Zap, AlertCircle, Mail } from "lucide-react";
 import { StorageService } from "@/lib/storage";
-import { ChatbotService } from "@/lib/chatbotService";
+import { ChatbotService, ChatbotResponse } from "@/lib/chatbotService";
 import { ChatMessage } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,25 +16,17 @@ export function Chatbot() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [isApiConnected, setIsApiConnected] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [adminMessage, setAdminMessage] = useState('');
   const [adminMessageSubject, setAdminMessageSubject] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load saved API key
-    const savedApiKey = localStorage.getItem('openai_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      ChatbotService.setApiKey(savedApiKey);
-    }
-
     // Initialize with welcome message
     const welcomeMessage = isAdmin 
-      ? "Hello! I'm your AI assistant for Excellence Coaching Center. I can help you with student queries, attendance tracking, fee management, and generate reports. What would you like to know?"
-      : "Hello! I'm your teaching assistant. I can help you with student information, attendance queries, and answer general questions about the coaching center. What would you like to know?";
+      ? "Hello! I'm your advanced AI assistant for Excellence Coaching Center. I can help you with student information, attendance tracking, and administrative tasks, but I cannot provide fee information. What would you like to know?"
+      : "Hello! I'm your AI teaching assistant. I can help you with student information, attendance queries, and answer general questions about the coaching center. I cannot provide fee information. What would you like to know?";
     
     setMessages([{
       id: 1,
@@ -42,7 +34,14 @@ export function Chatbot() {
       message: welcomeMessage,
       timestamp: new Date().toISOString()
     }]);
-  }, []);
+
+    setSuggestions([
+      "Show today's attendance",
+      "Student statistics by grade",
+      "Help me draft a parent message",
+      "What can you help with?"
+    ]);
+  }, [isAdmin]);
 
   useEffect(() => {
     scrollToBottom();
@@ -72,11 +71,12 @@ export function Chatbot() {
       const assistantMessage: ChatMessage = {
         id: Date.now() + 1,
         sender: 'assistant',
-        message: response,
+        message: response.message,
         timestamp: new Date().toISOString()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      setSuggestions(response.suggestions || []);
     } catch (error) {
       const errorMessage: ChatMessage = {
         id: Date.now() + 1,
@@ -99,33 +99,7 @@ export function Chatbot() {
     }
   };
 
-  const handleSaveApiKey = () => {
-    localStorage.setItem('openai_api_key', apiKey);
-    ChatbotService.setApiKey(apiKey);
-    toast.success('API key saved successfully');
-  };
 
-  const handleTestConnection = async () => {
-    if (!apiKey) {
-      toast.error('Please enter an API key first');
-      return;
-    }
-
-    try {
-      ChatbotService.setApiKey(apiKey);
-      const isConnected = await ChatbotService.testConnection();
-      setIsApiConnected(isConnected);
-      
-      if (isConnected) {
-        toast.success('AI connection successful');
-      } else {
-        toast.error('AI connection failed');
-      }
-    } catch (error) {
-      setIsApiConnected(false);
-      toast.error('Failed to test AI connection');
-    }
-  };
 
   const handleQuickQuery = (query: string) => {
     setInputMessage(query);
@@ -164,11 +138,11 @@ export function Chatbot() {
 
   const quickQueries = [
     "Show me today's attendance summary",
-    "Which students have overdue fees?",
-    "Show enrollment statistics by grade",
-    "Generate monthly revenue report",
+    "Show enrollment statistics by grade", 
     "List students with low attendance",
-    "Show notification statistics"
+    "Help me draft a parent message",
+    "Show Grade 10 student details",
+    "What are the attendance trends?"
   ];
 
   return (
@@ -185,9 +159,9 @@ export function Chatbot() {
                 {isAdmin ? 'Admin Chatbot Assistant' : 'Teacher Chatbot Assistant'}
               </h3>
               <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${isApiConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
                 <span className="text-sm text-gray-600">
-                  {isApiConnected ? 'AI Assistant Active' : 'AI Assistant Ready'}
+                  Advanced AI Assistant Active
                 </span>
               </div>
             </div>
@@ -249,6 +223,25 @@ export function Chatbot() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Suggestions */}
+        {suggestions.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-2">Suggested questions:</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleQuickQuery(suggestion)}
+                  className="px-3 py-1 text-xs bg-violet-100 text-violet-700 rounded-full hover:bg-violet-200 transition-colors"
+                  data-testid={`suggestion-${index}`}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Chat Input */}
         <div className="flex items-center space-x-3">
           <Input
@@ -256,7 +249,7 @@ export function Chatbot() {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask about students, attendance, fees, or anything else..."
+            placeholder="Ask about students, attendance, or anything else..."
             className="flex-1"
             data-testid="input-chat-message"
           />
@@ -291,63 +284,40 @@ export function Chatbot() {
         </div>
       </div>
 
-      {/* AI Configuration - Admin Only */}
-      {isAdmin && (
-        <div className="card">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-            <Settings className="w-5 h-5" />
-            <span>AI Configuration</span>
-          </h4>
+      {/* AI Status Information */}
+      <div className="card">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+          <Zap className="w-5 h-5" />
+          <span>AI Assistant Status</span>
+        </h4>
+        
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="text-sm text-green-800">
+              <strong>Advanced AI Active:</strong> Your AI Teaching Assistant is powered by OpenAI GPT-4o and can help with student information, attendance tracking, and administrative tasks. Fee information is restricted for security.
+            </div>
+          </div>
           
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="apiKey">OpenAI API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
-                className="mb-2"
-                data-testid="input-api-key"
-              />
-              <p className="text-xs text-gray-500">
-                Your API key is stored locally and never transmitted to our servers
-              </p>
-            </div>
+          <div className="text-sm text-gray-600">
+            <h5 className="font-medium text-gray-900 mb-2">AI Capabilities:</h5>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Student information and academic details (active and inactive students)</li>
+              <li>Attendance analysis and trend reporting</li>
+              <li>Parent communication assistance</li>
+              <li>Administrative task support</li>
+              <li>General coaching center information</li>
+            </ul>
             
-            <div className="flex items-center space-x-3">
-              <Button
-                onClick={handleSaveApiKey}
-                className="btn-primary"
-                data-testid="button-save-api-key"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Save API Key
-              </Button>
-              
-              <Button
-                onClick={handleTestConnection}
-                variant="outline"
-                data-testid="button-test-ai-connection"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Test Connection
-              </Button>
-            </div>
-
-            {!apiKey && (
-              <div className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-yellow-600" />
-                <div className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Without an API key, the chatbot will use rule-based responses. 
-                  For advanced AI capabilities, please configure your OpenAI API key.
-                </div>
-              </div>
-            )}
+            <h5 className="font-medium text-gray-900 mt-3 mb-2">Security Restrictions:</h5>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Cannot access or discuss fee information</li>
+              <li>Cannot modify student records directly</li>
+              <li>Cannot access sensitive financial data</li>
+            </ul>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Teacher-to-Admin Messaging - Teacher Only */}
       {!isAdmin && (

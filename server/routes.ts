@@ -293,6 +293,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advanced Chatbot endpoint
+  app.post("/api/chatbot", async (req, res) => {
+    try {
+      const { message } = req.body;
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: "Message is required and must be a string" });
+      }
+
+      const { AdvancedChatbotService } = await import("./chatbot");
+      const response = await AdvancedChatbotService.processMessage(message);
+      
+      res.json(response);
+    } catch (error) {
+      console.error("Chatbot error:", error);
+      res.status(500).json({ 
+        error: "Failed to process message",
+        message: "I apologize, but I'm having trouble processing your request right now. Please try again later.",
+        suggestions: [
+          "Show today's attendance",
+          "Student statistics",
+          "What can you help with?"
+        ]
+      });
+    }
+  });
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });

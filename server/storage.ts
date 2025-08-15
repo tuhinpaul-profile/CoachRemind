@@ -19,6 +19,7 @@ export interface IStorage {
 
   // Student methods
   getStudents(): Promise<Student[]>;
+  getAllStudents(): Promise<Student[]>; // Include inactive students
   getStudent(id: string): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
   updateStudent(id: string, student: Partial<InsertStudent>): Promise<Student | undefined>;
@@ -71,6 +72,10 @@ export class DbStorage implements IStorage {
   // Student methods
   async getStudents(): Promise<Student[]> {
     return await db.select().from(students).where(eq(students.isActive, true)).orderBy(students.name);
+  }
+
+  async getAllStudents(): Promise<Student[]> {
+    return await db.select().from(students).orderBy(students.name);
   }
 
   async getStudent(id: string): Promise<Student | undefined> {

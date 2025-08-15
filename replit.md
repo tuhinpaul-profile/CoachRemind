@@ -40,7 +40,7 @@ Preferred communication style: Simple, everyday language.
 
 ### External Service Integrations
 - **Email Service**: EmailJS integration for automated notifications and communication
-- **AI Chatbot**: OpenAI GPT-4o integration with fallback to rule-based responses
+- **AI Chatbot**: Advanced OpenAI GPT-4o server-side integration with security controls to prevent fee information disclosure while providing comprehensive student and attendance assistance
 - **PDF Generation**: jsPDF for generating attendance and fee reports
 - **Excel Export**: XLSX library for spreadsheet generation and data export
 - **Charts**: Custom canvas-based charting implementation for attendance and fee visualization
