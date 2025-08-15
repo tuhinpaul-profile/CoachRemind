@@ -232,7 +232,7 @@ export function StudentManagement() {
     }
   };
 
-  const exportStudents = (format: 'pdf' | 'excel' | 'html' = 'excel') => {
+  const exportStudents = async (format: 'pdf' | 'excel' | 'html' = 'excel') => {
     const studentsToExport = selectedStudents.size > 0 
       ? paginatedStudents.filter(s => selectedStudents.has(s.id))
       : paginatedStudents;
@@ -245,7 +245,6 @@ export function StudentManagement() {
       'Phone': student.phone,
       'Parent Phone': student.parentPhone,
       'Status': student.status,
-      'Monthly Fee': `₹${student.monthlyFee}`,
       'Enrollment Date': student.enrollmentDate
     }));
 
@@ -270,25 +269,206 @@ export function StudentManagement() {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Student Export - Page ${currentPage}</title>
+          <title>Excellence Coaching - Student Report</title>
+          <meta charset="utf-8">
           <style>
-            body { font-family: Inter, sans-serif; margin: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #f8f9fa; font-weight: 600; }
-            .header { margin-bottom: 20px; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              min-height: 100vh;
+              padding: 20px;
+              position: relative;
+            }
+            .watermark {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-45deg);
+              font-size: 120px;
+              color: rgba(255,255,255,0.05);
+              font-weight: 900;
+              z-index: 1;
+              pointer-events: none;
+              white-space: nowrap;
+            }
+            .container {
+              background: white;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+              overflow: hidden;
+              position: relative;
+              z-index: 2;
+            }
+            .header {
+              background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+              padding: 40px;
+              color: white;
+              text-align: center;
+            }
+            .logo {
+              width: 80px;
+              height: 80px;
+              background: rgba(255,255,255,0.2);
+              border-radius: 50%;
+              margin: 0 auto 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 36px;
+              font-weight: bold;
+            }
+            .header h1 {
+              font-size: 2.5rem;
+              font-weight: 700;
+              margin-bottom: 10px;
+            }
+            .header p {
+              font-size: 1.1rem;
+              opacity: 0.9;
+            }
+            .report-info {
+              background: #F8FAFC;
+              padding: 30px 40px;
+              border-bottom: 3px solid #E5E7EB;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+              gap: 20px;
+            }
+            .info-card {
+              background: white;
+              padding: 20px;
+              border-radius: 12px;
+              border-left: 4px solid #8B5CF6;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            }
+            .info-label {
+              font-size: 0.875rem;
+              color: #6B7280;
+              font-weight: 500;
+              text-transform: uppercase;
+              letter-spacing: 0.025em;
+            }
+            .info-value {
+              font-size: 1.25rem;
+              color: #111827;
+              font-weight: 600;
+              margin-top: 4px;
+            }
+            .table-container {
+              padding: 40px;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            }
+            th { 
+              background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+              color: white;
+              padding: 16px;
+              font-weight: 600;
+              font-size: 0.875rem;
+              text-transform: uppercase;
+              letter-spacing: 0.025em;
+              text-align: left;
+            }
+            td { 
+              padding: 16px;
+              border-bottom: 1px solid #E5E7EB;
+              font-size: 0.875rem;
+            }
+            tr:nth-child(even) {
+              background-color: #F9FAFB;
+            }
+            tr:hover {
+              background-color: #F3F4F6;
+            }
+            .status-active {
+              background: #10B981;
+              color: white;
+              padding: 4px 12px;
+              border-radius: 20px;
+              font-size: 0.75rem;
+              font-weight: 600;
+            }
+            .status-inactive {
+              background: #6B7280;
+              color: white;
+              padding: 4px 12px;
+              border-radius: 20px;
+              font-size: 0.75rem;
+              font-weight: 600;
+            }
+            .footer {
+              text-align: center;
+              padding: 30px;
+              background: #F8FAFC;
+              color: #6B7280;
+              font-size: 0.875rem;
+              border-top: 1px solid #E5E7EB;
+            }
+            @media print {
+              body { background: white; }
+              .watermark { display: block; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>Student Export Report</h1>
-            <p>Page ${currentPage} • Generated on ${new Date().toLocaleDateString()}</p>
-            <p>Total Students: ${studentsToExport.length}</p>
+          <div class="watermark">EXCELLENCE COACHING</div>
+          <div class="container">
+            <div class="header">
+              <div class="logo">🎓</div>
+              <h1>Excellence Coaching</h1>
+              <p>Student Management System • Academic Report</p>
+            </div>
+            
+            <div class="report-info">
+              <div class="info-grid">
+                <div class="info-card">
+                  <div class="info-label">Report Date</div>
+                  <div class="info-value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Page Number</div>
+                  <div class="info-value">${currentPage}</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Total Students</div>
+                  <div class="info-value">${studentsToExport.length}</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Report Type</div>
+                  <div class="info-value">Student Directory</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>${Object.keys(exportData[0] || {}).map(key => `<th>${key}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+                  ${exportData.map(row => `<tr>${Object.values(row).map(val => 
+                    typeof val === 'string' && (val === 'active' || val === 'inactive') 
+                      ? `<td><span class="status-${val}">${val.toUpperCase()}</span></td>`
+                      : `<td>${val}</td>`
+                  ).join('')}</tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="footer">
+              <p><strong>Excellence Coaching Student Management System</strong></p>
+              <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+              <p style="margin-top: 10px; font-style: italic;">"Excellence in Education, Success in Life"</p>
+            </div>
           </div>
-          <table>
-            <tr>${Object.keys(exportData[0] || {}).map(key => `<th>${key}</th>`).join('')}</tr>
-            ${exportData.map(row => `<tr>${Object.values(row).map(val => `<td>${val}</td>`).join('')}</tr>`).join('')}
-          </table>
         </body>
         </html>
       `;
@@ -300,6 +480,108 @@ export function StudentManagement() {
       link.download = `${fileName}.html`;
       link.click();
       URL.revokeObjectURL(url);
+    } else if (format === 'pdf') {
+      // Dynamic import to reduce bundle size
+      const { jsPDF } = await import('jspdf');
+      
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Add watermark
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(60);
+      doc.setTextColor(240, 240, 240);
+      doc.text('EXCELLENCE COACHING', pageWidth/2, pageHeight/2, {
+        align: 'center',
+        angle: 45
+      } as any);
+      
+      // Header with logo and title
+      doc.setTextColor(139, 92, 246);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Excellence Coaching', pageWidth/2, 30, { align: 'center' });
+      
+      doc.setFontSize(16);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Student Directory Report', pageWidth/2, 40, { align: 'center' });
+      
+      // Report info
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 55);
+      doc.text(`Page: ${currentPage}`, 20, 62);
+      doc.text(`Total Students: ${studentsToExport.length}`, 20, 69);
+      
+      // Table headers
+      const headers = Object.keys(exportData[0] || {});
+      const startY = 80;
+      const rowHeight = 8;
+      const colWidth = (pageWidth - 40) / headers.length;
+      
+      // Header background
+      doc.setFillColor(139, 92, 246);
+      doc.rect(20, startY, pageWidth - 40, rowHeight, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      
+      headers.forEach((header, index) => {
+        doc.text(header, 22 + (index * colWidth), startY + 5);
+      });
+      
+      // Table rows
+      doc.setTextColor(40, 40, 40);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      
+      exportData.forEach((row, rowIndex) => {
+        const yPos = startY + rowHeight + (rowIndex * rowHeight);
+        
+        // Alternate row colors
+        if (rowIndex % 2 === 0) {
+          doc.setFillColor(249, 250, 251);
+          doc.rect(20, yPos - 2, pageWidth - 40, rowHeight, 'F');
+        }
+        
+        Object.values(row).forEach((value, colIndex) => {
+          const text = String(value);
+          const xPos = 22 + (colIndex * colWidth);
+          
+          // Truncate long text
+          const maxLength = Math.floor(colWidth / 2);
+          const displayText = text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+          
+          doc.text(displayText, xPos, yPos + 3);
+        });
+        
+        // Add new page if needed
+        if (yPos > pageHeight - 50) {
+          doc.addPage();
+          // Add watermark to new page
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(60);
+          doc.setTextColor(240, 240, 240);
+          doc.text('EXCELLENCE COACHING', pageWidth/2, pageHeight/2, {
+            align: 'center',
+            angle: 45
+          } as any);
+        }
+      });
+      
+      // Footer
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth - 40, pageHeight - 10);
+        doc.text('Excellence Coaching Student Management System', 20, pageHeight - 10);
+      }
+      
+      doc.save(`${fileName}.pdf`);
     }
 
     toast.success(`${studentsToExport.length} students exported as ${format.toUpperCase()} for page ${currentPage}`);
@@ -396,17 +678,24 @@ export function StudentManagement() {
                 <Download className="w-4 h-4" />
                 <span>Export Page Data</span>
               </Button>
-              <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+              <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 min-w-48">
                 <button
                   onClick={() => exportStudents('excel')}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left"
+                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left rounded-t-lg"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-green-600" />
                   <span>Export as Excel</span>
                 </button>
                 <button
+                  onClick={() => exportStudents('pdf')}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left border-t border-gray-100"
+                >
+                  <FileText className="w-4 h-4 text-red-600" />
+                  <span>Export as PDF</span>
+                </button>
+                <button
                   onClick={() => exportStudents('html')}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left"
+                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left border-t border-gray-100 rounded-b-lg"
                 >
                   <Globe className="w-4 h-4 text-blue-600" />
                   <span>Export as HTML</span>
