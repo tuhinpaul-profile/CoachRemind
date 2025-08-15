@@ -1,4 +1,4 @@
-import { X, User, Mail, Phone, Calendar, MapPin, Heart, UserCheck, Clock, AlertCircle, Award, BookOpen, TrendingUp, TrendingDown, MessageCircle, Star, Target, Brain } from "lucide-react";
+import { X, User, Mail, Phone, Calendar, MapPin, Heart, UserCheck, Clock, AlertCircle, Award, BookOpen, TrendingUp, TrendingDown, MessageCircle, Star, Target, Brain, CheckCircle } from "lucide-react";
 import { Student, Fee } from "@/types";
 import { StorageService } from "@/lib/storage";
 
