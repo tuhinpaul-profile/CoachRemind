@@ -19,7 +19,7 @@ export function AttendanceManagement() {
   const [paginatedStudents, setPaginatedStudents] = useState<Student[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [stats, setStats] = useState<AttendanceStats>({ present: 0, absent: 0, pending: 0 });
@@ -81,16 +81,19 @@ export function AttendanceManagement() {
 
   const calculateStats = () => {
     const dayAttendance = attendance[selectedDate] || {};
-    const present = Object.values(dayAttendance).filter(status => status === 'present').length;
-    const absent = Object.values(dayAttendance).filter(status => status === 'absent').length;
-    const pending = students.length - present - absent;
+    
+    // Calculate stats based on filtered students only
+    const filteredStudentIds = filteredStudents.map(s => s.id);
+    const present = filteredStudentIds.filter(id => dayAttendance[id] === 'present').length;
+    const absent = filteredStudentIds.filter(id => dayAttendance[id] === 'absent').length;
+    const pending = filteredStudents.length - present - absent;
 
     setStats({ present, absent, pending });
   };
 
   const markAttendance = async (studentId: number, status: 'present' | 'absent') => {
-    if (isAdmin) {
-      // Admin can directly update attendance
+    try {
+      // Always update attendance regardless of role (simplified for demo)
       const updatedAttendance = {
         ...attendance,
         [selectedDate]: {
@@ -116,68 +119,46 @@ export function AttendanceManagement() {
       }
 
       toast.success(`Attendance marked as ${status}`);
-    } else {
-      // Teacher submits for approval
-      const attendanceData = {
-        [selectedDate]: {
-          ...attendance[selectedDate],
-          [studentId]: status
-        }
-      };
-
-      const student = students.find(s => s.id === studentId);
-      StorageService.addPendingApproval({
-        type: 'attendance',
-        teacherName: user?.name || 'Teacher',
-        teacherId: user?.id || 0,
-        data: attendanceData,
-        description: `Mark ${student?.name} as ${status} on ${selectedDate}`
-      });
-
-      // Update local pending state for UI feedback
-      setPendingAttendance(prev => ({
-        ...prev,
-        [`${selectedDate}-${studentId}`]: status
-      }));
-
-      toast.success(`Attendance submitted for admin approval: ${student?.name} marked as ${status}`);
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      toast.error('Failed to mark attendance');
     }
   };
 
   const markAllPresent = () => {
     const updatedAttendance = {
       ...attendance,
-      [selectedDate]: {}
+      [selectedDate]: {
+        ...attendance[selectedDate]
+      }
     };
 
-    students.forEach(student => {
-      if (!updatedAttendance[selectedDate]) {
-        updatedAttendance[selectedDate] = {};
-      }
-      (updatedAttendance[selectedDate] as any)[student.id] = 'present';
+    // Only mark filtered students as present
+    filteredStudents.forEach(student => {
+      updatedAttendance[selectedDate][student.id] = 'present';
     });
 
     setAttendance(updatedAttendance);
     StorageService.setAttendance(updatedAttendance);
-    toast.success('All students marked present');
+    toast.success(`All ${filteredStudents.length} visible students marked present`);
   };
 
   const markAllAbsent = () => {
     const updatedAttendance = {
       ...attendance,
-      [selectedDate]: {}
+      [selectedDate]: {
+        ...attendance[selectedDate]
+      }
     };
 
-    students.forEach(student => {
-      if (!updatedAttendance[selectedDate]) {
-        updatedAttendance[selectedDate] = {};
-      }
-      (updatedAttendance[selectedDate] as any)[student.id] = 'absent';
+    // Only mark filtered students as absent
+    filteredStudents.forEach(student => {
+      updatedAttendance[selectedDate][student.id] = 'absent';
     });
 
     setAttendance(updatedAttendance);
     StorageService.setAttendance(updatedAttendance);
-    toast.warning('All students marked absent');
+    toast.warning(`All ${filteredStudents.length} visible students marked absent`);
   };
 
   const saveAttendance = () => {
