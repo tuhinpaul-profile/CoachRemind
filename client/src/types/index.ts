@@ -44,8 +44,35 @@ export interface ParentTeacherMeeting {
 
 export interface AttendanceRecord {
   [date: string]: {
-    [studentId: number]: 'present' | 'absent';
+    [studentId: number]: 'present' | 'absent' | 'late';
   };
+}
+
+export interface AttendanceSubmission {
+  id: string;
+  date: string;
+  studentId: number;
+  studentName: string;
+  grade: string;
+  status: 'present' | 'absent' | 'late';
+  teacherId: string;
+  teacherName: string;
+  submittedAt: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvedAt?: string;
+  approvedBy?: string;
+}
+
+export interface AttendanceBatch {
+  id: string;
+  date: string;
+  grade: string;
+  teacherId: string;
+  teacherName: string;
+  submittedAt: string;
+  totalStudents: number;
+  pendingCount: number;
+  submissions: AttendanceSubmission[];
 }
 
 export interface Fee {

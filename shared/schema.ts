@@ -31,6 +31,12 @@ export const attendance = pgTable("attendance", {
   studentId: varchar("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
   date: timestamp("date").notNull(),
   status: text("status").notNull(), // 'present', 'absent', 'late'
+  approvalStatus: text("approval_status").default("approved"), // 'pending', 'approved', 'rejected'
+  teacherId: varchar("teacher_id").references(() => users.id),
+  teacherName: text("teacher_name"),
+  submittedAt: timestamp("submitted_at"),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

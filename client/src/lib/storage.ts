@@ -1,4 +1,4 @@
-import { Student, AttendanceRecord, Fee, Notification, EmailConfig, PendingApproval } from '@/types';
+import { Student, AttendanceRecord, Fee, Notification, EmailConfig, PendingApproval, AttendanceSubmission, AttendanceBatch } from '@/types';
 
 const STORAGE_KEYS = {
   STUDENTS: 'coaching_students',
@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   SETTINGS: 'coaching_settings',
   PENDING_APPROVALS: 'coaching_pending_approvals',
   CURRENT_USER: 'coaching-user',
+  ATTENDANCE_SUBMISSIONS: 'coaching_attendance_submissions',
 };
 
 export class StorageService {
@@ -204,6 +205,136 @@ export class StorageService {
     approval.status = 'rejected';
     this.setPendingApprovals(approvals);
     return true;
+  }
+
+  // Attendance Submission Methods
+  static getAttendanceSubmissions(): AttendanceSubmission[] {
+    const data = localStorage.getItem(STORAGE_KEYS.ATTENDANCE_SUBMISSIONS);
+    return data ? JSON.parse(data) : [];
+  }
+
+  static setAttendanceSubmissions(submissions: AttendanceSubmission[]): void {
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE_SUBMISSIONS, JSON.stringify(submissions));
+  }
+
+  static submitAttendanceForApproval(
+    date: string,
+    attendanceData: { [studentId: number]: 'present' | 'absent' | 'late' },
+    teacherId: string,
+    teacherName: string,
+    students: Student[]
+  ): AttendanceSubmission[] {
+    const submissions = this.getAttendanceSubmissions();
+    const newSubmissions: AttendanceSubmission[] = [];
+
+    Object.entries(attendanceData).forEach(([studentId, status]) => {
+      const student = students.find(s => s.id === parseInt(studentId));
+      if (student) {
+        const submission: AttendanceSubmission = {
+          id: `${date}-${studentId}-${Date.now()}`,
+          date,
+          studentId: parseInt(studentId),
+          studentName: student.name,
+          grade: student.grade,
+          status,
+          teacherId,
+          teacherName,
+          submittedAt: new Date().toISOString(),
+          approvalStatus: 'pending'
+        };
+        newSubmissions.push(submission);
+        submissions.push(submission);
+      }
+    });
+
+    this.setAttendanceSubmissions(submissions);
+    
+    // Add notification for admin
+    this.addNotification({
+      type: 'info',
+      message: `${teacherName} submitted attendance for ${date} (${newSubmissions.length} students)`,
+      read: false
+    });
+
+    return newSubmissions;
+  }
+
+  static approveAttendanceSubmissions(submissionIds: string[], adminId: string): boolean {
+    const submissions = this.getAttendanceSubmissions();
+    const attendance = this.getAttendance();
+
+    let approved = 0;
+    submissionIds.forEach(id => {
+      const submission = submissions.find(s => s.id === id);
+      if (submission && submission.approvalStatus === 'pending') {
+        submission.approvalStatus = 'approved';
+        submission.approvedAt = new Date().toISOString();
+        submission.approvedBy = adminId;
+
+        // Add to approved attendance record
+        if (!attendance[submission.date]) {
+          attendance[submission.date] = {};
+        }
+        attendance[submission.date][submission.studentId] = submission.status as 'present' | 'absent' | 'late';
+        approved++;
+      }
+    });
+
+    this.setAttendanceSubmissions(submissions);
+    this.setAttendance(attendance);
+    return approved > 0;
+  }
+
+  static rejectAttendanceSubmissions(submissionIds: string[], adminId: string): boolean {
+    const submissions = this.getAttendanceSubmissions();
+
+    let rejected = 0;
+    submissionIds.forEach(id => {
+      const submission = submissions.find(s => s.id === id);
+      if (submission && submission.approvalStatus === 'pending') {
+        submission.approvalStatus = 'rejected';
+        submission.approvedAt = new Date().toISOString();
+        submission.approvedBy = adminId;
+        rejected++;
+      }
+    });
+
+    this.setAttendanceSubmissions(submissions);
+    return rejected > 0;
+  }
+
+  static getPendingAttendanceBatches(): AttendanceBatch[] {
+    const submissions = this.getAttendanceSubmissions();
+    const pendingSubmissions = submissions.filter(s => s.approvalStatus === 'pending');
+    
+    // Group by date, grade, and teacher
+    const batches: { [key: string]: AttendanceBatch } = {};
+    
+    pendingSubmissions.forEach(submission => {
+      const key = `${submission.date}-${submission.grade}-${submission.teacherId}`;
+      
+      if (!batches[key]) {
+        batches[key] = {
+          id: key,
+          date: submission.date,
+          grade: submission.grade,
+          teacherId: submission.teacherId,
+          teacherName: submission.teacherName,
+          submittedAt: submission.submittedAt,
+          totalStudents: 0,
+          pendingCount: 0,
+          submissions: []
+        };
+      }
+      
+      batches[key].submissions.push(submission);
+      batches[key].totalStudents++;
+      batches[key].pendingCount++;
+    });
+
+    return Object.values(batches).sort((a, b) => 
+      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
   }
 
   // User Management Methods

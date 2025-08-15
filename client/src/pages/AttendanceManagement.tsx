@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Check, X, Search, Filter, Clock } from "lucide-react";
+import { Check, X, Search, Filter, Clock, Calendar, Users, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { EmailService } from "@/lib/emailService";
-import { Student, AttendanceRecord, AttendanceStats } from "@/types";
+import { Student, AttendanceRecord, AttendanceStats, AttendanceBatch, AttendanceSubmission } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,10 +29,16 @@ export function AttendanceManagement() {
   const [pendingAttendance, setPendingAttendance] = useState<{[key: string]: 'present' | 'absent'}>({});
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'pending'>('saved');
+  const [pendingBatches, setPendingBatches] = useState<AttendanceBatch[]>([]);
+  const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'take-attendance' : 'take-attendance');
   const { toast } = useToast();
 
   useEffect(() => {
     loadData();
+    if (isAdmin) {
+      loadPendingBatches();
+    }
   }, []);
 
   useEffect(() => {
@@ -55,6 +64,13 @@ export function AttendanceManagement() {
   useEffect(() => {
     paginateStudents();
   }, [filteredStudents, currentPage, pageSize]);
+
+  const loadPendingBatches = () => {
+    if (isAdmin) {
+      const batches = StorageService.getPendingAttendanceBatches();
+      setPendingBatches(batches);
+    }
+  };
 
   const loadData = () => {
     let studentsData = StorageService.getStudents();
@@ -103,6 +119,48 @@ export function AttendanceManagement() {
       ];
       StorageService.setStudents(sampleStudents);
       studentsData = sampleStudents;
+    }
+    
+    // Create sample attendance submissions for demonstration if none exist
+    const existingSubmissions = StorageService.getAttendanceSubmissions();
+    if (existingSubmissions.length === 0 && isAdmin) {
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      // Create sample submissions from different teachers
+      const sampleAttendanceData = {
+        [yesterday]: {
+          1: 'present' as const,
+          2: 'absent' as const,
+          3: 'present' as const
+        }
+      };
+      
+      StorageService.submitAttendanceForApproval(
+        yesterday,
+        sampleAttendanceData[yesterday],
+        'teacher1',
+        'Ms. Sarah Johnson',
+        studentsData
+      );
+      
+      // Create another batch for today
+      const todayAttendanceData = {
+        [today]: {
+          1: 'present' as const,
+          2: 'present' as const,
+          4: 'absent' as const,
+          5: 'present' as const
+        }
+      };
+      
+      StorageService.submitAttendanceForApproval(
+        today,
+        todayAttendanceData[today],
+        'teacher2', 
+        'Mr. David Wilson',
+        studentsData
+      );
     }
     
     console.log('Students with status:', studentsData.map(s => ({ id: s.id, name: s.name, status: s.status })));
@@ -163,20 +221,28 @@ export function AttendanceManagement() {
 
   const markAttendance = async (studentId: number, status: 'present' | 'absent') => {
     try {
-      // Always update attendance regardless of role (simplified for demo)
-      const updatedAttendance = {
-        ...attendance,
-        [selectedDate]: {
-          ...attendance[selectedDate],
-          [studentId]: status
-        }
-      };
+      if (isAdmin) {
+        // Admin can directly update attendance
+        const updatedAttendance = {
+          ...attendance,
+          [selectedDate]: {
+            ...attendance[selectedDate],
+            [studentId]: status
+          }
+        };
 
-      setAttendance(updatedAttendance);
-      StorageService.setAttendance(updatedAttendance);
+        setAttendance(updatedAttendance);
+        StorageService.setAttendance(updatedAttendance);
+      } else {
+        // Teachers update pending attendance for later submission
+        setPendingAttendance(prev => ({
+          ...prev,
+          [`${selectedDate}-${studentId}`]: status
+        }));
+      }
 
-      // Send automatic notification for absent students
-      if (status === 'absent') {
+      // Send automatic notification for absent students (admin only)
+      if (isAdmin && status === 'absent') {
         const student = students.find(s => s.id === studentId);
         if (student) {
           try {
@@ -188,10 +254,61 @@ export function AttendanceManagement() {
         }
       }
 
-      toast.success(`Attendance marked as ${status}`);
+      toast.success(`Attendance marked as ${status}${!isAdmin ? ' (pending approval)' : ''}`);
     } catch (error) {
       console.error('Error marking attendance:', error);
       toast.error('Failed to mark attendance');
+    }
+  };
+
+  const submitAttendanceForApproval = () => {
+    if (Object.keys(pendingAttendance).length === 0) {
+      toast({
+        title: "No Changes",
+        description: "Please mark attendance for students before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Convert pending attendance to the format expected by the service
+    const attendanceByStudent: { [studentId: number]: 'present' | 'absent' | 'late' } = {};
+    
+    Object.entries(pendingAttendance).forEach(([key, status]) => {
+      const [date, studentIdStr] = key.split('-');
+      if (date === selectedDate) {
+        attendanceByStudent[parseInt(studentIdStr)] = status;
+      }
+    });
+
+    const submissions = StorageService.submitAttendanceForApproval(
+      selectedDate,
+      attendanceByStudent,
+      user?.id || 'teacher',
+      user?.username || 'Teacher',
+      students
+    );
+
+    if (submissions.length > 0) {
+      toast({
+        title: "Submitted Successfully",
+        description: `Attendance for ${submissions.length} students submitted for admin approval.`,
+      });
+      
+      // Clear pending attendance for this date
+      const newPending = { ...pendingAttendance };
+      Object.keys(newPending).forEach(key => {
+        if (key.startsWith(selectedDate)) {
+          delete newPending[key];
+        }
+      });
+      setPendingAttendance(newPending);
+    } else {
+      toast({
+        title: "Submission Failed",
+        description: "Failed to submit attendance for approval.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -273,8 +390,131 @@ export function AttendanceManagement() {
   };
 
   const getAttendanceStatus = (studentId: number) => {
-    return attendance[selectedDate]?.[studentId] || 'pending';
+    if (isAdmin) {
+      return attendance[selectedDate]?.[studentId] || 'pending';
+    } else {
+      // For teachers, check pending attendance first
+      const pendingKey = `${selectedDate}-${studentId}`;
+      return pendingAttendance[pendingKey] || attendance[selectedDate]?.[studentId] || 'pending';
+    }
   };
+
+  // Approval functions
+  const handleApproveSelected = () => {
+    if (selectedSubmissions.size === 0) {
+      toast({
+        title: "No Selection",
+        description: "Please select attendance records to approve.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = StorageService.approveAttendanceSubmissions(
+      Array.from(selectedSubmissions),
+      user?.id || 'admin'
+    );
+
+    if (success) {
+      toast({
+        title: "Approved Successfully",
+        description: `${selectedSubmissions.size} attendance records have been approved.`,
+      });
+      setSelectedSubmissions(new Set());
+      loadPendingBatches();
+      loadData(); // Refresh the main attendance data
+    } else {
+      toast({
+        title: "Approval Failed",
+        description: "Failed to approve attendance records.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectSelected = () => {
+    if (selectedSubmissions.size === 0) {
+      toast({
+        title: "No Selection",
+        description: "Please select attendance records to reject.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = StorageService.rejectAttendanceSubmissions(
+      Array.from(selectedSubmissions),
+      user?.id || 'admin'
+    );
+
+    if (success) {
+      toast({
+        title: "Rejected Successfully",
+        description: `${selectedSubmissions.size} attendance records have been rejected.`,
+      });
+      setSelectedSubmissions(new Set());
+      loadPendingBatches();
+    } else {
+      toast({
+        title: "Rejection Failed",
+        description: "Failed to reject attendance records.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleApproveBatch = (batch: AttendanceBatch) => {
+    const submissionIds = batch.submissions.map(s => s.id);
+    const success = StorageService.approveAttendanceSubmissions(
+      submissionIds,
+      user?.id || 'admin'
+    );
+
+    if (success) {
+      toast({
+        title: "Batch Approved",
+        description: `All ${batch.totalStudents} records for ${batch.grade} on ${batch.date} have been approved.`,
+      });
+      loadPendingBatches();
+      loadData();
+    }
+  };
+
+  const handleRejectBatch = (batch: AttendanceBatch) => {
+    const submissionIds = batch.submissions.map(s => s.id);
+    const success = StorageService.rejectAttendanceSubmissions(
+      submissionIds,
+      user?.id || 'admin'
+    );
+
+    if (success) {
+      toast({
+        title: "Batch Rejected",
+        description: `All ${batch.totalStudents} records for ${batch.grade} on ${batch.date} have been rejected.`,
+      });
+      loadPendingBatches();
+    }
+  };
+
+  const toggleSubmissionSelection = (submissionId: string) => {
+    const newSelection = new Set(selectedSubmissions);
+    if (newSelection.has(submissionId)) {
+      newSelection.delete(submissionId);
+    } else {
+      newSelection.add(submissionId);
+    }
+    setSelectedSubmissions(newSelection);
+  };
+
+  const selectAllInBatch = (batch: AttendanceBatch) => {
+    const newSelection = new Set(selectedSubmissions);
+    batch.submissions.forEach(submission => {
+      newSelection.add(submission.id);
+    });
+    setSelectedSubmissions(newSelection);
+  };
+
+
 
   const grades = ['6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
@@ -299,64 +539,112 @@ export function AttendanceManagement() {
     <div className="space-y-6">
       <div className="card">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Daily Attendance Tracking</h3>
-          <div className="flex items-center space-x-4">
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto"
-              data-testid="input-attendance-date"
-            />
-            <button 
-              onClick={markAllPresent} 
-              disabled={gradeFilter === 'all'}
-              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                gradeFilter === 'all' 
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`} 
-              data-testid="button-mark-all-present"
-            >
-              Mark All Present
-            </button>
-            <button 
-              onClick={markAllAbsent} 
-              disabled={gradeFilter === 'all'}
-              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                gradeFilter === 'all' 
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                  : 'bg-red-600 hover:bg-red-700 text-white'
-              }`} 
-              data-testid="button-mark-all-absent"
-            >
-              Mark All Absent
-            </button>
-            <div className="flex items-center space-x-2">
-              <div className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm ${
-                autoSaveStatus === 'saved' ? 'bg-green-50 text-green-700' :
-                autoSaveStatus === 'saving' ? 'bg-blue-50 text-blue-700' :
-                'bg-orange-50 text-orange-700'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${
-                  autoSaveStatus === 'saved' ? 'bg-green-500' :
-                  autoSaveStatus === 'saving' ? 'bg-blue-500 animate-pulse' :
-                  'bg-orange-500'
-                }`}></div>
-                <span>
-                  {autoSaveStatus === 'saved' && lastSaved ? 
-                    `Auto-saved ${lastSaved.toLocaleTimeString()}` :
-                    autoSaveStatus === 'saving' ? 'Saving...' :
-                    'Pending save'
-                  }
-                </span>
-              </div>
-            </div>
-          </div>
+          <h3 className="text-lg font-semibold text-gray-900">Attendance Management</h3>
         </div>
 
-        {/* Search and Filter */}
-        <div className="mb-4 flex items-center space-x-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`} data-testid="tabs-attendance-management">
+            <TabsTrigger value="take-attendance" data-testid="tab-take-attendance">
+              <Calendar className="w-4 h-4 mr-2" />
+              Take Attendance
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="approve-attendance" data-testid="tab-approve-attendance">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                Approve Attendance
+                {pendingBatches.length > 0 && (
+                  <Badge variant="destructive" className="ml-2">
+                    {pendingBatches.reduce((sum, batch) => sum + batch.pendingCount, 0)}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="take-attendance" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="text-md font-medium text-gray-800">Daily Attendance Tracking</h4>
+              <div className="flex items-center space-x-4">
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-auto"
+                  data-testid="input-attendance-date"
+                />
+                <button 
+                  onClick={markAllPresent} 
+                  disabled={gradeFilter === 'all'}
+                  className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    gradeFilter === 'all' 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  }`} 
+                  data-testid="button-mark-all-present"
+                >
+                  Mark All Present
+                </button>
+                <button 
+                  onClick={markAllAbsent} 
+                  disabled={gradeFilter === 'all'}
+                  className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    gradeFilter === 'all' 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`} 
+                  data-testid="button-mark-all-absent"
+                >
+                  Mark All Absent
+                </button>
+                {!isAdmin && Object.keys(pendingAttendance).some(key => key.startsWith(selectedDate)) && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="bg-violet-600 hover:bg-violet-700" data-testid="button-submit-for-approval">
+                        <Clock className="w-4 h-4 mr-2" />
+                        Submit for Approval
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent data-testid="dialog-submit-approval">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Submit Attendance for Approval</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Submit attendance records for {selectedDate} to admin for approval? This will send all marked attendance for this date.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel data-testid="button-cancel-submit">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={submitAttendanceForApproval} data-testid="button-confirm-submit">
+                          Submit
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                <div className="flex items-center space-x-2">
+                  <div className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm ${
+                    autoSaveStatus === 'saved' ? 'bg-green-50 text-green-700' :
+                    autoSaveStatus === 'saving' ? 'bg-blue-50 text-blue-700' :
+                    'bg-orange-50 text-orange-700'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${
+                      autoSaveStatus === 'saved' ? 'bg-green-500' :
+                      autoSaveStatus === 'saving' ? 'bg-blue-500 animate-pulse' :
+                      'bg-orange-500'
+                    }`}></div>
+                    <span>
+                      {autoSaveStatus === 'saved' && lastSaved ? 
+                        `Auto-saved ${lastSaved.toLocaleTimeString()}` :
+                        autoSaveStatus === 'saving' ? 'Saving...' :
+                        'Pending save'
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Search and Filter */}
+            <div className="mb-4 flex items-center space-x-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
@@ -438,6 +726,12 @@ export function AttendanceManagement() {
                   <div>
                     <div className="font-medium text-gray-900">{student.name}</div>
                     <div className="text-sm text-gray-500">{student.grade} • Roll: {student.rollNumber}</div>
+                    {!isAdmin && pendingAttendance[`${selectedDate}-${student.id}`] && (
+                      <div className="text-xs text-orange-600 font-medium mt-1">
+                        <Clock className="w-3 h-3 inline mr-1" />
+                        Pending Approval
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -471,17 +765,197 @@ export function AttendanceManagement() {
           })}
         </div>
 
-        {/* Pagination */}
-        {filteredStudents.length > 0 && (
-          <TablePagination
-            currentPage={currentPage}
-            totalPages={Math.ceil(filteredStudents.length / pageSize)}
-            pageSize={pageSize}
-            totalItems={filteredStudents.length}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-          />
-        )}
+            {/* Pagination */}
+            {filteredStudents.length > 0 && (
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredStudents.length / pageSize)}
+                pageSize={pageSize}
+                totalItems={filteredStudents.length}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
+          </TabsContent>
+
+          {/* Approval Tab for Admin */}
+          {isAdmin && (
+            <TabsContent value="approve-attendance" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-md font-medium text-gray-800">Pending Attendance Approvals</h4>
+                {selectedSubmissions.size > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="default" className="bg-green-600 hover:bg-green-700" data-testid="button-approve-selected">
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve Selected ({selectedSubmissions.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent data-testid="dialog-approve-selected">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Approve Selected Attendance</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to approve {selectedSubmissions.size} attendance record(s)? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel data-testid="button-cancel-approve">Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleApproveSelected} data-testid="button-confirm-approve">
+                            Approve
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" data-testid="button-reject-selected">
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject Selected ({selectedSubmissions.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent data-testid="dialog-reject-selected">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Reject Selected Attendance</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to reject {selectedSubmissions.size} attendance record(s)? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel data-testid="button-cancel-reject">Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleRejectSelected} data-testid="button-confirm-reject">
+                            Reject
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
+              </div>
+
+              {pendingBatches.length === 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">All Caught Up!</h3>
+                  <p className="text-gray-500">No pending attendance approvals at the moment.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {pendingBatches.map((batch) => (
+                    <div key={batch.id} className="border rounded-lg p-6 bg-white shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <h5 className="font-medium text-gray-900">
+                              {batch.grade} - {new Date(batch.date).toLocaleDateString()}
+                            </h5>
+                            <p className="text-sm text-gray-500">
+                              Submitted by {batch.teacherName} • {batch.totalStudents} students
+                              <span className="ml-2 text-xs text-gray-400">
+                                {new Date(batch.submittedAt).toLocaleString()}
+                              </span>
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                            {batch.pendingCount} pending
+                          </Badge>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => selectAllInBatch(batch)}
+                            data-testid={`button-select-all-${batch.id}`}
+                          >
+                            <Users className="w-4 h-4 mr-2" />
+                            Select All
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" data-testid={`button-approve-batch-${batch.id}`}>
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Approve Batch
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Approve Entire Batch</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to approve all {batch.totalStudents} attendance records for {batch.grade} on {new Date(batch.date).toLocaleDateString()}?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleApproveBatch(batch)}>
+                                  Approve All
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm" data-testid={`button-reject-batch-${batch.id}`}>
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Reject Batch
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Reject Entire Batch</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to reject all {batch.totalStudents} attendance records for {batch.grade} on {new Date(batch.date).toLocaleDateString()}?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleRejectBatch(batch)}>
+                                  Reject All
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {batch.submissions.map((submission) => (
+                          <div key={submission.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedSubmissions.has(submission.id)}
+                                onChange={() => toggleSubmissionSelection(submission.id)}
+                                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                                data-testid={`checkbox-${submission.id}`}
+                              />
+                              <div>
+                                <div className="font-medium text-gray-900">{submission.studentName}</div>
+                                <div className="text-sm text-gray-500">Roll: {submission.studentId}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge 
+                                variant={submission.status === 'present' ? 'default' : submission.status === 'absent' ? 'destructive' : 'secondary'}
+                                className={submission.status === 'present' ? 'bg-green-100 text-green-700' : ''}
+                              >
+                                {submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}
+                              </Badge>
+                              <span className="text-xs text-gray-400">
+                                {new Date(submission.submittedAt).toLocaleTimeString()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
     </div>
   );
