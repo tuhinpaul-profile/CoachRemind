@@ -10,6 +10,7 @@ export interface Student {
   monthlyFee: number;
   status: 'active' | 'inactive';
   enrollmentDate: string;
+  profileImage?: string;
 }
 
 export interface AttendanceRecord {

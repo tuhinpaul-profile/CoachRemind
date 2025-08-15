@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, Filter, Plus, Edit, Trash2, Download, Upload, User, Mail, Phone, CheckCircle, XCircle, Clock, MoreVertical, Eye, UserCheck, AlertTriangle, FileText, FileSpreadsheet, Globe } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { Student, Fee } from "@/types";
@@ -27,6 +27,8 @@ export function StudentManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedStudents, setSelectedStudents] = useState<Set<number>>(new Set());
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -40,6 +42,19 @@ export function StudentManagement() {
   useEffect(() => {
     paginateStudents();
   }, [filteredStudents, currentPage, pageSize]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target as Node)) {
+        setShowExportDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const loadData = () => {
     const studentsData = StorageService.getStudents();
@@ -517,20 +532,50 @@ export function StudentManagement() {
       // Table headers
       const headers = Object.keys(exportData[0] || {});
       const startY = 80;
-      const rowHeight = 8;
-      const colWidth = (pageWidth - 40) / headers.length;
+      let currentY = startY;
+      const rowHeight = 10;
+      const minColWidth = 25;
+      const totalAvailableWidth = pageWidth - 40;
       
-      // Header background
-      doc.setFillColor(139, 92, 246);
-      doc.rect(20, startY, pageWidth - 40, rowHeight, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      
-      headers.forEach((header, index) => {
-        doc.text(header, 22 + (index * colWidth), startY + 5);
+      // Calculate column widths based on content
+      const colWidths = headers.map((header, index) => {
+        const headerLength = header.length;
+        const maxContentLength = Math.max(
+          ...exportData.map(row => String(Object.values(row)[index]).length)
+        );
+        const baseWidth = Math.max(headerLength * 2.5, maxContentLength * 1.5, minColWidth);
+        return Math.min(baseWidth, totalAvailableWidth / headers.length * 1.5);
       });
+      
+      // Normalize widths to fit page
+      const totalWidth = colWidths.reduce((sum, w) => sum + w, 0);
+      if (totalWidth > totalAvailableWidth) {
+        const scaleFactor = totalAvailableWidth / totalWidth;
+        colWidths.forEach((width, i) => colWidths[i] = width * scaleFactor);
+      }
+      
+      const drawTableHeader = () => {
+        // Header background
+        doc.setFillColor(139, 92, 246);
+        doc.rect(20, currentY, totalAvailableWidth, rowHeight, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        
+        let xPos = 22;
+        headers.forEach((header, index) => {
+          // Use splitTextToSize to handle long headers
+          const lines = doc.splitTextToSize(header, colWidths[index] - 4);
+          doc.text(lines[0] || header, xPos, currentY + 6);
+          xPos += colWidths[index];
+        });
+        
+        currentY += rowHeight;
+      };
+      
+      // Draw initial header
+      drawTableHeader();
       
       // Table rows
       doc.setTextColor(40, 40, 40);
@@ -538,28 +583,10 @@ export function StudentManagement() {
       doc.setFontSize(8);
       
       exportData.forEach((row, rowIndex) => {
-        const yPos = startY + rowHeight + (rowIndex * rowHeight);
-        
-        // Alternate row colors
-        if (rowIndex % 2 === 0) {
-          doc.setFillColor(249, 250, 251);
-          doc.rect(20, yPos - 2, pageWidth - 40, rowHeight, 'F');
-        }
-        
-        Object.values(row).forEach((value, colIndex) => {
-          const text = String(value);
-          const xPos = 22 + (colIndex * colWidth);
-          
-          // Truncate long text
-          const maxLength = Math.floor(colWidth / 2);
-          const displayText = text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
-          
-          doc.text(displayText, xPos, yPos + 3);
-        });
-        
-        // Add new page if needed
-        if (yPos > pageHeight - 50) {
+        // Check if we need a new page
+        if (currentY > pageHeight - 40) {
           doc.addPage();
+          currentY = 30;
           // Add watermark to new page
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(60);
@@ -568,7 +595,34 @@ export function StudentManagement() {
             align: 'center',
             angle: 45
           } as any);
+          
+          // Redraw header on new page
+          drawTableHeader();
+          doc.setTextColor(40, 40, 40);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
         }
+        
+        // Alternate row colors
+        if (rowIndex % 2 === 0) {
+          doc.setFillColor(249, 250, 251);
+          doc.rect(20, currentY, totalAvailableWidth, rowHeight, 'F');
+        }
+        
+        let xPos = 22;
+        Object.values(row).forEach((value, colIndex) => {
+          const text = String(value);
+          const colWidth = colWidths[colIndex];
+          
+          // Use splitTextToSize for proper text wrapping
+          const lines = doc.splitTextToSize(text, colWidth - 4);
+          const displayText = lines[0] || text;
+          
+          doc.text(displayText, xPos, currentY + 6);
+          xPos += colWidth;
+        });
+        
+        currentY += rowHeight;
       });
       
       // Footer
@@ -595,6 +649,23 @@ export function StudentManagement() {
     if (hasOverdue) return { status: 'overdue', color: 'red' };
     if (hasPending) return { status: 'pending', color: 'yellow' };
     return { status: 'paid', color: 'green' };
+  };
+
+  const getStudentImage = (studentId: number) => {
+    // Using a deterministic approach to assign images based on student ID
+    const imageOptions = [
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1463453091185-61582044d556?w=100&h=100&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1489980557514-251d61e3eeb6?w=100&h=100&fit=crop&crop=face'
+    ];
+    return imageOptions[studentId % imageOptions.length];
   };
 
   const getStudentAttendanceInfo = (studentId: number) => {
@@ -668,9 +739,9 @@ export function StudentManagement() {
                 <span>Delete Selected ({selectedStudents.size})</span>
               </Button>
             )}
-            <div className="relative group">
+            <div className="relative" ref={exportDropdownRef}>
               <Button
-                onClick={() => exportStudents('excel')}
+                onClick={() => setShowExportDropdown(!showExportDropdown)}
                 variant="outline"
                 className="flex items-center space-x-2"
                 data-testid="button-export-students"
@@ -678,29 +749,31 @@ export function StudentManagement() {
                 <Download className="w-4 h-4" />
                 <span>Export Page Data</span>
               </Button>
-              <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 min-w-48">
-                <button
-                  onClick={() => exportStudents('excel')}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left rounded-t-lg"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
-                  <span>Export as Excel</span>
-                </button>
-                <button
-                  onClick={() => exportStudents('pdf')}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left border-t border-gray-100"
-                >
-                  <FileText className="w-4 h-4 text-red-600" />
-                  <span>Export as PDF</span>
-                </button>
-                <button
-                  onClick={() => exportStudents('html')}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left border-t border-gray-100 rounded-b-lg"
-                >
-                  <Globe className="w-4 h-4 text-blue-600" />
-                  <span>Export as HTML</span>
-                </button>
-              </div>
+              {showExportDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-10 min-w-48">
+                  <button
+                    onClick={() => { exportStudents('excel'); setShowExportDropdown(false); }}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 w-full text-left rounded-t-lg text-gray-700 dark:text-gray-300"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                    <span>Export as Excel</span>
+                  </button>
+                  <button
+                    onClick={() => { exportStudents('pdf'); setShowExportDropdown(false); }}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 w-full text-left border-t border-gray-100 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                  >
+                    <FileText className="w-4 h-4 text-red-600" />
+                    <span>Export as PDF</span>
+                  </button>
+                  <button
+                    onClick={() => { exportStudents('html'); setShowExportDropdown(false); }}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 w-full text-left border-t border-gray-100 dark:border-gray-600 rounded-b-lg text-gray-700 dark:text-gray-300"
+                  >
+                    <Globe className="w-4 h-4 text-blue-600" />
+                    <span>Export as HTML</span>
+                  </button>
+                </div>
+              )}
             </div>
             {isAdmin && (
               <Button
@@ -828,13 +901,27 @@ export function StudentManagement() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-4">
                         <div className="relative">
-                          <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-violet-200 rounded-xl flex items-center justify-center shadow-sm">
-                            <span className="text-sm font-semibold text-violet-700">
-                              {student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                            </span>
+                          <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm ring-2 ring-white dark:ring-gray-800">
+                            <img
+                              src={student.profileImage || getStudentImage(student.id)}
+                              alt={student.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                // Fallback to initials if image fails to load
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
+                            />
+                            <div className="w-full h-full bg-gradient-to-br from-violet-100 to-violet-200 rounded-xl flex items-center justify-center shadow-sm" style={{display: 'none'}}>
+                              <span className="text-sm font-semibold text-violet-700">
+                                {student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                              </span>
+                            </div>
                           </div>
                           {student.status === 'active' && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center">
                               <CheckCircle className="w-2 h-2 text-white" />
                             </div>
                           )}

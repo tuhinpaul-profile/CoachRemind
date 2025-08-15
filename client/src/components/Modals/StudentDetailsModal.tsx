@@ -89,6 +89,26 @@ export function StudentDetailsModal({ student, isOpen, onClose }: StudentDetails
   const strongSubjects = performance.filter(p => p.score >= 80);
   const weakSubjects = performance.filter(p => p.score < 70);
 
+  // Generate a consistent student image based on their ID
+  const getStudentImage = (studentId: number) => {
+    // Using a deterministic approach to assign images based on student ID
+    const imageOptions = [
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face', 
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1463453091185-61582044d556?w=150&h=150&fit=crop&crop=face',
+      'https://images.unsplash.com/photo-1489980557514-251d61e3eeb6?w=150&h=150&fit=crop&crop=face'
+    ];
+    return imageOptions[studentId % imageOptions.length];
+  };
+
+  const studentImage = student.profileImage || getStudentImage(student.id);
+
   const getStatusColor = (status: string) => {
     return status === 'active' 
       ? 'bg-green-100 text-green-800 border-green-200' 
@@ -97,18 +117,39 @@ export function StudentDetailsModal({ student, isOpen, onClose }: StudentDetails
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border dark:border-gray-700" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20">
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-violet-200 rounded-xl flex items-center justify-center shadow-sm">
-              <span className="text-xl font-bold text-violet-700">
-                {student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-              </span>
+            <div className="relative">
+              <div className="w-20 h-20 rounded-xl overflow-hidden shadow-lg ring-4 ring-white dark:ring-gray-800">
+                <img
+                  src={studentImage}
+                  alt={student.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to initials if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <div className="w-full h-full bg-gradient-to-br from-violet-100 to-violet-200 rounded-xl flex items-center justify-center shadow-sm" style={{display: 'none'}}>
+                  <span className="text-lg font-bold text-violet-700">
+                    {student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                  </span>
+                </div>
+              </div>
+              {student.status === 'active' && (
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-3 border-white dark:border-gray-800 flex items-center justify-center">
+                  <CheckCircle className="w-3 h-3 text-white" />
+                </div>
+              )}
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{student.name}</h2>
-              <p className="text-gray-600">Roll Number: {student.rollNumber}</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{student.name}</h2>
+              <p className="text-gray-600 dark:text-gray-300">Roll Number: {student.rollNumber}</p>
               <div className={`inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium border mt-2 ${getStatusColor(student.status)}`}>
                 {student.status === 'active' ? <UserCheck className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
                 {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
