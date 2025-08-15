@@ -77,7 +77,7 @@ export function Sidebar() {
         )}
       </div>
       
-      <nav className="mt-6 px-3">
+      <nav className="mt-6 px-2">
         <ul className="space-y-1">
           {allowedItems.map((item) => {
             const Icon = item.icon;
@@ -86,14 +86,14 @@ export function Sidebar() {
             return (
               <li key={item.path}>
                 <Link href={item.path}>
-                  <span 
-                    className={`nav-link ${isActive ? 'active' : ''} ${isCollapsed ? 'justify-center px-3 py-3' : 'px-4 py-3'}`}
+                  <div 
+                    className={`nav-link ${isActive ? 'active' : ''} ${isCollapsed ? 'flex justify-center px-2 py-3' : 'flex items-center px-4 py-3'}`}
                     data-testid={`nav-${item.path.replace('/', '') || 'dashboard'}`}
                     title={isCollapsed ? item.label : undefined}
                   >
-                    <Icon className={`w-5 h-5 ${isCollapsed ? 'mx-auto' : 'mr-3'} flex-shrink-0`} />
-                    {!isCollapsed && <span className="truncate">{item.label}</span>}
-                  </span>
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${isCollapsed ? '' : 'mr-3'}`} />
+                    {!isCollapsed && <span className="truncate font-medium">{item.label}</span>}
+                  </div>
                 </Link>
               </li>
             );

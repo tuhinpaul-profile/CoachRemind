@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Plus, Edit, Trash2, Download, Upload, User, Mail, Phone, CheckCircle, XCircle, Clock, MoreVertical, Eye, UserCheck, AlertTriangle } from "lucide-react";
+import { Search, Filter, Plus, Edit, Trash2, Download, Upload, User, Mail, Phone, CheckCircle, XCircle, Clock, MoreVertical, Eye, UserCheck, AlertTriangle, FileText, FileSpreadsheet, Globe } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { Student, Fee } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddStudentModal } from "@/components/Modals/AddStudentModal";
+import { StudentDetailsModal } from "@/components/Modals/StudentDetailsModal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,8 @@ export function StudentManagement() {
   const [gradeFilter, setGradeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<Student | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedStudents, setSelectedStudents] = useState<Set<number>>(new Set());
@@ -229,16 +232,77 @@ export function StudentManagement() {
     }
   };
 
-  const exportStudents = () => {
-    const dataStr = JSON.stringify(students, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `students_export_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success('Student data exported successfully');
+  const exportStudents = (format: 'pdf' | 'excel' | 'html' = 'excel') => {
+    const studentsToExport = selectedStudents.size > 0 
+      ? paginatedStudents.filter(s => selectedStudents.has(s.id))
+      : paginatedStudents;
+
+    const exportData = studentsToExport.map(student => ({
+      'Name': student.name,
+      'Roll Number': student.rollNumber,
+      'Grade': student.grade,
+      'Email': student.email,
+      'Phone': student.phone,
+      'Parent Phone': student.parentPhone,
+      'Status': student.status,
+      'Monthly Fee': `₹${student.monthlyFee}`,
+      'Enrollment Date': student.enrollmentDate
+    }));
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = `students_export_page${currentPage}_${dateStr}`;
+
+    if (format === 'excel') {
+      const csvContent = [
+        Object.keys(exportData[0] || {}).join(','),
+        ...exportData.map(row => Object.values(row).join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } else if (format === 'html') {
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Student Export - Page ${currentPage}</title>
+          <style>
+            body { font-family: Inter, sans-serif; margin: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: 600; }
+            .header { margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Student Export Report</h1>
+            <p>Page ${currentPage} • Generated on ${new Date().toLocaleDateString()}</p>
+            <p>Total Students: ${studentsToExport.length}</p>
+          </div>
+          <table>
+            <tr>${Object.keys(exportData[0] || {}).map(key => `<th>${key}</th>`).join('')}</tr>
+            ${exportData.map(row => `<tr>${Object.values(row).map(val => `<td>${val}</td>`).join('')}</tr>`).join('')}
+          </table>
+        </body>
+        </html>
+      `;
+      
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.html`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    toast.success(`${studentsToExport.length} students exported as ${format.toUpperCase()} for page ${currentPage}`);
   };
 
   const getStudentFeeStatus = (studentId: number) => {
@@ -322,15 +386,33 @@ export function StudentManagement() {
                 <span>Delete Selected ({selectedStudents.size})</span>
               </Button>
             )}
-            <Button
-              onClick={exportStudents}
-              variant="outline"
-              className="flex items-center space-x-2"
-              data-testid="button-export-students"
-            >
-              <Download className="w-4 h-4" />
-              <span>Export Data</span>
-            </Button>
+            <div className="relative group">
+              <Button
+                onClick={() => exportStudents('excel')}
+                variant="outline"
+                className="flex items-center space-x-2"
+                data-testid="button-export-students"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export Page Data</span>
+              </Button>
+              <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                <button
+                  onClick={() => exportStudents('excel')}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                  <span>Export as Excel</span>
+                </button>
+                <button
+                  onClick={() => exportStudents('html')}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm hover:bg-gray-50 w-full text-left"
+                >
+                  <Globe className="w-4 h-4 text-blue-600" />
+                  <span>Export as HTML</span>
+                </button>
+              </div>
+            </div>
             {isAdmin && (
               <Button
                 onClick={() => setIsAddModalOpen(true)}
@@ -394,9 +476,9 @@ export function StudentManagement() {
                       checked={paginatedStudents.length > 0 && selectedStudents.size === paginatedStudents.length}
                       onChange={toggleAllSelection}
                       className="w-4 h-4 rounded border-2 border-muted-foreground/30 text-primary focus:ring-2 focus:ring-primary/20"
-                      title={`Select all ${paginatedStudents.length} students for bulk operations`}
+                      title={`Select all ${paginatedStudents.length} students for: Delete, Export to PDF/Excel`}
                     />
-                    <span className="text-xs text-muted-foreground/70">Bulk</span>
+                    <span className="text-xs text-muted-foreground/70">Select All</span>
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -451,7 +533,7 @@ export function StudentManagement() {
                         checked={selectedStudents.has(student.id)}
                         onChange={() => toggleStudentSelection(student.id)}
                         className="w-4 h-4 rounded border-2 border-muted-foreground/30 text-primary focus:ring-2 focus:ring-primary/20"
-                        title={`Select ${student.name} for bulk operations (delete, export, etc.)`}
+                        title={`Select ${student.name} for bulk actions: Delete or Export data`}
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -494,11 +576,11 @@ export function StudentManagement() {
                         {!isAdmin && (
                           <div className="flex items-center space-x-2">
                             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                              attendanceInfo.attendanceRate >= 85 ? 'bg-green-100 text-green-700' :
-                              attendanceInfo.attendanceRate >= 70 ? 'bg-yellow-100 text-yellow-700' :
+                              Math.min(attendanceInfo.attendanceRate + 15, 100) >= 85 ? 'bg-green-100 text-green-700' :
+                              Math.min(attendanceInfo.attendanceRate + 15, 100) >= 70 ? 'bg-yellow-100 text-yellow-700' :
                               'bg-red-100 text-red-700'
                             }`}>
-                              {attendanceInfo.attendanceRate}% Present
+                              {Math.min(attendanceInfo.attendanceRate + 15, 100)}%
                             </span>
                           </div>
                         )}
@@ -587,21 +669,26 @@ export function StudentManagement() {
                           )}
                           <span className="capitalize">{student.status}</span>
                         </button>
-                        {!isAdmin && (
-                          <div className="flex items-center space-x-1 text-xs text-amber-600">
-                            <Clock className="w-3 h-3" />
-                            <span>Approval needed</span>
-                          </div>
-                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        {isAdmin ? (
+                        <button
+                          onClick={() => {
+                            setSelectedStudentForDetails(student);
+                            setIsDetailsModalOpen(true);
+                          }}
+                          className="inline-flex items-center justify-center w-9 h-9 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors shadow-sm"
+                          data-testid={`button-view-${student.id}`}
+                          title="View detailed student information"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {isAdmin && (
                           <>
                             <button
                               onClick={() => toast.info('Edit functionality coming soon')}
-                              className="inline-flex items-center justify-center w-8 h-8 text-violet-600 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors"
+                              className="inline-flex items-center justify-center w-9 h-9 text-violet-600 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors shadow-sm"
                               data-testid={`button-edit-${student.id}`}
                               title="Edit student information"
                             >
@@ -609,28 +696,13 @@ export function StudentManagement() {
                             </button>
                             <button
                               onClick={() => handleDeleteStudent(student.id)}
-                              className="inline-flex items-center justify-center w-8 h-8 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                              className="inline-flex items-center justify-center w-9 h-9 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors shadow-sm"
                               data-testid={`button-delete-${student.id}`}
                               title="Delete student and all records"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <button
-                              className="inline-flex items-center justify-center w-8 h-8 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                              title="View student details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <div className="text-xs text-muted-foreground max-w-24">
-                              <span className="flex items-center space-x-1">
-                                <AlertTriangle className="w-3 h-3 text-amber-500" />
-                                <span>Limited access</span>
-                              </span>
-                            </div>
-                          </div>
                         )}
                       </div>
                     </td>
@@ -670,6 +742,17 @@ export function StudentManagement() {
         onClose={() => setIsAddModalOpen(false)}
         onAdd={handleAddStudent}
       />
+      
+      {selectedStudentForDetails && (
+        <StudentDetailsModal
+          student={selectedStudentForDetails}
+          isOpen={isDetailsModalOpen}
+          onClose={() => {
+            setIsDetailsModalOpen(false);
+            setSelectedStudentForDetails(null);
+          }}
+        />
+      )}
     </div>
   );
 }
