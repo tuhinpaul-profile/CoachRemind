@@ -52,7 +52,7 @@ export function FeeManagement() {
       });
     }
 
-    if (statusFilter) {
+    if (statusFilter && statusFilter !== 'all') {
       if (statusFilter === 'due_soon') {
         filtered = filtered.filter(fee => {
           if (fee.status !== 'pending') return false;
@@ -327,7 +327,7 @@ export function FeeManagement() {
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="paid">Paid</SelectItem>
               <SelectItem value="overdue">Overdue</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>

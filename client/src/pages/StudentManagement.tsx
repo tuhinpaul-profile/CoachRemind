@@ -44,11 +44,11 @@ export function StudentManagement() {
       );
     }
 
-    if (gradeFilter) {
+    if (gradeFilter && gradeFilter !== 'all') {
       filtered = filtered.filter(student => student.grade === gradeFilter);
     }
 
-    if (statusFilter) {
+    if (statusFilter && statusFilter !== 'all') {
       filtered = filtered.filter(student => student.status === statusFilter);
     }
 
@@ -203,7 +203,7 @@ export function StudentManagement() {
                 <SelectValue placeholder="All Grades" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Grades</SelectItem>
+                <SelectItem value="all">All Grades</SelectItem>
                 {grades.map(grade => (
                   <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                 ))}
@@ -214,7 +214,7 @@ export function StudentManagement() {
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>

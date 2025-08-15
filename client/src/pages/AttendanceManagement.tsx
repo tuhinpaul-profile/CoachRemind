@@ -44,7 +44,7 @@ export function AttendanceManagement() {
       );
     }
 
-    if (gradeFilter) {
+    if (gradeFilter && gradeFilter !== 'all') {
       filtered = filtered.filter(student => student.grade === gradeFilter);
     }
 
@@ -185,7 +185,7 @@ export function AttendanceManagement() {
                 <SelectValue placeholder="All Grades" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Grades</SelectItem>
+                <SelectItem value="all">All Grades</SelectItem>
                 {grades.map(grade => (
                   <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                 ))}
