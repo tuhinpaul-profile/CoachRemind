@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Plus, Edit, Trash2, Download, Upload } from "lucide-react";
+import { Search, Filter, Plus, Edit, Trash2, Download, Upload, User, Mail, Phone, CheckCircle, XCircle, Clock, MoreVertical, Eye, UserCheck, AlertTriangle } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { Student, Fee } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -298,11 +298,11 @@ export function StudentManagement() {
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Student Management</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-2xl font-semibold text-foreground tracking-tight">Student Management</h3>
+            <p className="text-muted-foreground">
               {isAdmin 
-                ? `Add, edit, and manage student information`
-                : `View student information and manage status (requires admin approval)`
+                ? `Add, edit, and manage student information with full administrative control`
+                : `View student information and manage status • Changes require admin approval`
               }
             </p>
             <p className="text-sm text-muted-foreground mt-1">
@@ -385,24 +385,34 @@ export function StudentManagement() {
         {/* Students Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted/50">
+            <thead className="bg-muted/30">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  <input
-                    type="checkbox"
-                    checked={paginatedStudents.length > 0 && selectedStudents.size === paginatedStudents.length}
-                    onChange={toggleAllSelection}
-                    className="rounded border-gray-300"
-                  />
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={paginatedStudents.length > 0 && selectedStudents.size === paginatedStudents.length}
+                      onChange={toggleAllSelection}
+                      className="w-4 h-4 rounded border-2 border-muted-foreground/30 text-primary focus:ring-2 focus:ring-primary/20"
+                      title={`Select all ${paginatedStudents.length} students for bulk operations`}
+                    />
+                    <span className="text-xs text-muted-foreground/70">Bulk</span>
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Student
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center space-x-2">
+                    <User className="w-4 h-4" />
+                    <span>Student Details</span>
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Grade
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Grade & Performance
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Contact
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center space-x-2">
+                    <Phone className="w-4 h-4" />
+                    <span>Contact Info</span>
+                  </div>
                 </th>
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -414,51 +424,110 @@ export function StudentManagement() {
                     Attendance
                   </th>
                 )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Status
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Enrollment Status</span>
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Actions
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center space-x-2">
+                    <MoreVertical className="w-4 h-4" />
+                    <span>Quick Actions</span>
+                  </div>
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-card divide-y divide-border" data-testid="students-table-body">
+            <tbody className="bg-card divide-y divide-border/50" data-testid="students-table-body">
               {paginatedStudents.map((student) => {
                 const feeStatus = getStudentFeeStatus(student.id);
                 const attendanceInfo = getStudentAttendanceInfo(student.id);
                 
                 return (
-                  <tr key={student.id} data-testid={`student-row-${student.id}`} className={selectedStudents.has(student.id) ? 'bg-muted/30' : ''}>
+                  <tr key={student.id} data-testid={`student-row-${student.id}`} className={`hover:bg-muted/20 transition-colors ${selectedStudents.has(student.id) ? 'bg-primary/5 border-l-4 border-l-primary' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedStudents.has(student.id)}
                         onChange={() => toggleStudentSelection(student.id)}
-                        className="rounded border-gray-300"
+                        className="w-4 h-4 rounded border-2 border-muted-foreground/30 text-primary focus:ring-2 focus:ring-primary/20"
+                        title={`Select ${student.name} for bulk operations (delete, export, etc.)`}
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-violet-800">
-                            {student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-foreground" data-testid={`student-name-${student.id}`}>
-                            {student.name}
+                      <div className="flex items-center space-x-4">
+                        <div className="relative">
+                          <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-violet-200 rounded-xl flex items-center justify-center shadow-sm">
+                            <span className="text-sm font-semibold text-violet-700">
+                              {student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                            </span>
                           </div>
-                          <div className="text-sm text-muted-foreground">Roll: {student.rollNumber}</div>
-                          <div className="text-sm text-muted-foreground">{student.email}</div>
+                          {student.status === 'active' && (
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                              <CheckCircle className="w-2 h-2 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center space-x-2">
+                            <div className="text-sm font-semibold text-foreground" data-testid={`student-name-${student.id}`}>
+                              {student.name}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-muted text-muted-foreground">
+                              Roll: {student.rollNumber}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1 mt-1 text-xs text-muted-foreground">
+                            <Mail className="w-3 h-3" />
+                            <span className="truncate">{student.email}</span>
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      {student.grade}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="space-y-2">
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                          {student.grade} Grade
+                        </div>
+                        {!isAdmin && (
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
+                              attendanceInfo.attendanceRate >= 85 ? 'bg-green-100 text-green-700' :
+                              attendanceInfo.attendanceRate >= 70 ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {attendanceInfo.attendanceRate}% Present
+                            </span>
+                          </div>
+                        )}
+                        {isAdmin && (
+                          <div className="flex items-center space-x-1">
+                            <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
+                              feeStatus.status === 'paid' ? 'bg-green-100 text-green-700' :
+                              feeStatus.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              Fee: {feeStatus.status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-foreground">{student.phone}</div>
-                      <div className="text-sm text-muted-foreground">{student.parentPhone}</div>
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2 text-sm text-foreground">
+                          <Phone className="w-3 h-3 text-muted-foreground" />
+                          <span className="font-medium">Student:</span>
+                          <span>{student.phone}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <User className="w-3 h-3" />
+                          <span className="font-medium">Parent:</span>
+                          <span>{student.parentPhone}</span>
+                        </div>
+                      </div>
                     </td>
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -500,42 +569,68 @@ export function StudentManagement() {
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleToggleStatus(student.id)}
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          student.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                        data-testid={`button-toggle-status-${student.id}`}
-                      >
-                        {student.status}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        {isAdmin && (
-                          <button
-                            onClick={() => toast.info('Edit functionality coming soon')}
-                            className="text-violet-600 hover:text-violet-900"
-                            data-testid={`button-edit-${student.id}`}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        )}
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleDeleteStudent(student.id)}
-                            className="text-red-600 hover:text-red-900"
-                            data-testid={`button-delete-${student.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                      <div className="flex flex-col space-y-2">
+                        <button
+                          onClick={() => handleToggleStatus(student.id)}
+                          className={`inline-flex items-center space-x-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${
+                            student.status === 'active'
+                              ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                              : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100'
+                          }`}
+                          data-testid={`button-toggle-status-${student.id}`}
+                          title={`Click to ${student.status === 'active' ? 'deactivate' : 'activate'} student ${!isAdmin ? '(requires admin approval)' : ''}`}
+                        >
+                          {student.status === 'active' ? (
+                            <CheckCircle className="w-3 h-3" />
+                          ) : (
+                            <XCircle className="w-3 h-3" />
+                          )}
+                          <span className="capitalize">{student.status}</span>
+                        </button>
                         {!isAdmin && (
-                          <span className="text-muted-foreground text-xs">
-                            Status changes require admin approval
-                          </span>
+                          <div className="flex items-center space-x-1 text-xs text-amber-600">
+                            <Clock className="w-3 h-3" />
+                            <span>Approval needed</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        {isAdmin ? (
+                          <>
+                            <button
+                              onClick={() => toast.info('Edit functionality coming soon')}
+                              className="inline-flex items-center justify-center w-8 h-8 text-violet-600 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors"
+                              data-testid={`button-edit-${student.id}`}
+                              title="Edit student information"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStudent(student.id)}
+                              className="inline-flex items-center justify-center w-8 h-8 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                              data-testid={`button-delete-${student.id}`}
+                              title="Delete student and all records"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              className="inline-flex items-center justify-center w-8 h-8 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                              title="View student details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <div className="text-xs text-muted-foreground max-w-24">
+                              <span className="flex items-center space-x-1">
+                                <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                <span>Limited access</span>
+                              </span>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </td>

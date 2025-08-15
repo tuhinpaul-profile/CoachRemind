@@ -77,8 +77,8 @@ export function Sidebar() {
         )}
       </div>
       
-      <nav className="mt-6 px-4">
-        <ul className="space-y-2">
+      <nav className="mt-6 px-3">
+        <ul className="space-y-1">
           {allowedItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.path;
@@ -87,12 +87,12 @@ export function Sidebar() {
               <li key={item.path}>
                 <Link href={item.path}>
                   <span 
-                    className={`nav-link ${isActive ? 'active' : ''} ${isCollapsed ? 'justify-center' : ''}`}
+                    className={`nav-link ${isActive ? 'active' : ''} ${isCollapsed ? 'justify-center px-3 py-3' : 'px-4 py-3'}`}
                     data-testid={`nav-${item.path.replace('/', '') || 'dashboard'}`}
                     title={isCollapsed ? item.label : undefined}
                   >
-                    <Icon className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'}`} />
-                    {!isCollapsed && item.label}
+                    <Icon className={`w-5 h-5 ${isCollapsed ? 'mx-auto' : 'mr-3'} flex-shrink-0`} />
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
                   </span>
                 </Link>
               </li>
