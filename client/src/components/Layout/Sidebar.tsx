@@ -10,20 +10,26 @@ import {
   Settings,
   GraduationCap
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigationItems = [
-  { path: "/", label: "Dashboard Overview", icon: LayoutDashboard },
-  { path: "/students", label: "Student Management", icon: Users },
-  { path: "/attendance", label: "Attendance Management", icon: ClipboardCheck },
-  { path: "/fees", label: "Fee Management", icon: DollarSign },
-  { path: "/reports", label: "Reports & Analytics", icon: BarChart3 },
-  { path: "/notifications", label: "Automated Notifications", icon: Bell },
-  { path: "/chatbot", label: "Admin Chatbot", icon: MessageSquare },
-  { path: "/settings", label: "Settings", icon: Settings },
+  { path: "/", label: "Dashboard Overview", icon: LayoutDashboard, roles: ["admin", "teacher"] },
+  { path: "/students", label: "Student Management", icon: Users, roles: ["admin", "teacher"] },
+  { path: "/attendance", label: "Attendance Management", icon: ClipboardCheck, roles: ["admin", "teacher"] },
+  { path: "/fees", label: "Fee Management", icon: DollarSign, roles: ["admin"] },
+  { path: "/reports", label: "Reports & Analytics", icon: BarChart3, roles: ["admin"] },
+  { path: "/notifications", label: "Notifications", icon: Bell, roles: ["admin"] },
+  { path: "/chatbot", label: "AI Assistant", icon: MessageSquare, roles: ["admin", "teacher"] },
+  { path: "/settings", label: "Settings", icon: Settings, roles: ["admin", "teacher"] },
 ];
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
+
+  const allowedItems = navigationItems.filter(item => 
+    item.roles.includes(user?.role || "teacher")
+  );
 
   return (
     <div className="w-64 bg-sidebar shadow-lg border-r border-sidebar-border sidebar-transition">
@@ -41,7 +47,7 @@ export function Sidebar() {
       
       <nav className="mt-6 px-4">
         <ul className="space-y-2">
-          {navigationItems.map((item) => {
+          {allowedItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.path;
             

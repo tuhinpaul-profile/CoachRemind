@@ -20,7 +20,7 @@ import { initializeSampleData } from "@/lib/sampleData";
 import { useToast, ToastContainer } from "@/hooks/useToast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute, RoleProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -54,7 +54,7 @@ function Router() {
         subtitle: "Configure and send automated notifications"
       },
       "/chatbot": {
-        title: "Admin Chatbot",
+        title: "AI Assistant",
         subtitle: "AI-powered assistant for student queries"
       },
       "/settings": {
@@ -89,15 +89,27 @@ function Router() {
             }} />
             <Route path="/fees" component={() => {
               updatePageInfo("/fees");
-              return <FeeManagement />;
+              return (
+                <RoleProtectedRoute requiredRole="admin">
+                  <FeeManagement />
+                </RoleProtectedRoute>
+              );
             }} />
             <Route path="/reports" component={() => {
               updatePageInfo("/reports");
-              return <Reports />;
+              return (
+                <RoleProtectedRoute requiredRole="admin">
+                  <Reports />
+                </RoleProtectedRoute>
+              );
             }} />
             <Route path="/notifications" component={() => {
               updatePageInfo("/notifications");
-              return <Notifications />;
+              return (
+                <RoleProtectedRoute requiredRole="admin">
+                  <Notifications />
+                </RoleProtectedRoute>
+              );
             }} />
             <Route path="/chatbot" component={() => {
               updatePageInfo("/chatbot");

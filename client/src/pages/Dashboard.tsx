@@ -4,8 +4,11 @@ import { StorageService } from "@/lib/storage";
 import { Student, Fee, AttendanceRecord, DashboardStats } from "@/types";
 import { AttendanceChart } from "@/components/Charts/AttendanceChart";
 import { FeeChart } from "@/components/Charts/FeeChart";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Dashboard() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [students, setStudents] = useState<Student[]>([]);
   const [fees, setFees] = useState<Fee[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord>({});
@@ -109,7 +112,7 @@ export function Dashboard() {
   return (
     <div className="fade-in">
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 mb-8`}>
         <StatCard
           title="Total Students"
           value={stats.totalStudents}
@@ -124,24 +127,37 @@ export function Dashboard() {
           color="text-green-600"
           subtitle="Students present"
         />
-        <StatCard
-          title="Pending Fees"
-          value={stats.pendingFees}
-          icon={DollarSign}
-          color="text-orange-600"
-          subtitle="Students with due fees"
-        />
-        <StatCard
-          title="Monthly Revenue"
-          value={`₹${stats.monthlyRevenue.toLocaleString()}`}
-          icon={TrendingUp}
-          color="text-violet-600"
-          subtitle="This month's collection"
-        />
+        {isAdmin && (
+          <StatCard
+            title="Pending Fees"
+            value={stats.pendingFees}
+            icon={DollarSign}
+            color="text-orange-600"
+            subtitle="Students with due fees"
+          />
+        )}
+        {isAdmin && (
+          <StatCard
+            title="Monthly Revenue"
+            value={`₹${stats.monthlyRevenue.toLocaleString()}`}
+            icon={TrendingUp}
+            color="text-violet-600"
+            subtitle="This month's collection"
+          />
+        )}
+        {!isAdmin && (
+          <StatCard
+            title="Present Today"
+            value={stats.presentCount}
+            icon={ClipboardCheck}
+            color="text-green-600"
+            subtitle="Students attended"
+          />
+        )}
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-2' : ''} gap-6 mb-8`}>
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Attendance</h3>
           <div className="space-y-4">
@@ -168,43 +184,47 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Fee Management</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-white" />
+        {isAdmin && (
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Fee Management</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="font-medium text-gray-900">Send Fee Reminders</span>
                 </div>
-                <span className="font-medium text-gray-900">Send Fee Reminders</span>
+                <button 
+                  className="btn-warning"
+                  data-testid="button-send-reminders"
+                  onClick={() => window.location.href = '/notifications'}
+                >
+                  Send
+                </button>
               </div>
-              <button 
-                className="btn-warning"
-                data-testid="button-send-reminders"
-                onClick={() => window.location.href = '/notifications'}
-              >
-                Send
-              </button>
-            </div>
-            <div className="text-sm text-gray-600" data-testid="fee-summary">
-              <span data-testid="overdue-count">{stats.overdueCount}</span> Overdue • 
-              <span data-testid="due-soon-count"> {stats.dueSoonCount}</span> Due Soon
+              <div className="text-sm text-gray-600" data-testid="fee-summary">
+                <span data-testid="overdue-count">{stats.overdueCount}</span> Overdue • 
+                <span data-testid="due-soon-count"> {stats.dueSoonCount}</span> Due Soon
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-2' : ''} gap-6 mb-8`}>
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Attendance Trends</h3>
           <AttendanceChart attendance={attendance} students={students} />
         </div>
         
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Fee Collection Trends</h3>
-          <FeeChart fees={fees} students={students} />
-        </div>
+        {isAdmin && (
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Fee Collection Trends</h3>
+            <FeeChart fees={fees} students={students} />
+          </div>
+        )}
       </div>
 
       {/* Recent Activity */}
@@ -223,7 +243,7 @@ export function Dashboard() {
               <span className="text-xs text-gray-400 ml-auto">Today</span>
             </div>
           )}
-          {stats.monthlyRevenue > 0 && (
+          {isAdmin && stats.monthlyRevenue > 0 && (
             <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
               <div className="w-2 h-2 bg-violet-500 rounded-full"></div>
               <span className="text-sm text-gray-600">₹{stats.monthlyRevenue.toLocaleString()} collected this month</span>

@@ -8,8 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AddStudentModal } from "@/components/Modals/AddStudentModal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function StudentManagement() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [students, setStudents] = useState<Student[]>([]);
   const [fees, setFees] = useState<Fee[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
@@ -238,7 +241,7 @@ export function StudentManagement() {
             <p className="text-sm text-muted-foreground">Total: {students.length} students enrolled • Showing: {filteredStudents.length}</p>
           </div>
           <div className="flex items-center space-x-4">
-            {selectedStudents.size > 0 && (
+            {isAdmin && selectedStudents.size > 0 && (
               <Button
                 onClick={bulkDeleteStudents}
                 variant="destructive"
@@ -258,14 +261,16 @@ export function StudentManagement() {
               <Download className="w-4 h-4" />
               <span>Export Data</span>
             </Button>
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              className="btn-primary flex items-center space-x-2"
-              data-testid="button-add-student"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Student</span>
-            </Button>
+            {isAdmin && (
+              <Button
+                onClick={() => setIsAddModalOpen(true)}
+                className="btn-primary flex items-center space-x-2"
+                data-testid="button-add-student"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Student</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -397,20 +402,24 @@ export function StudentManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => toast.info('Edit functionality coming soon')}
-                          className="text-violet-600 hover:text-violet-900"
-                          data-testid={`button-edit-${student.id}`}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteStudent(student.id)}
-                          className="text-red-600 hover:text-red-900"
-                          data-testid={`button-delete-${student.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => toast.info('Edit functionality coming soon')}
+                            className="text-violet-600 hover:text-violet-900"
+                            data-testid={`button-edit-${student.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDeleteStudent(student.id)}
+                            className="text-red-600 hover:text-red-900"
+                            data-testid={`button-delete-${student.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
