@@ -1050,14 +1050,31 @@ export function StudentManagement() {
                           </div>
                         )}
                         {isAdmin && (
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-2">
                             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                              Math.min(attendanceInfo.attendanceRate + 15, 100) >= 85 ? 'bg-green-100 text-green-700' :
-                              Math.min(attendanceInfo.attendanceRate + 15, 100) >= 70 ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
+                              attendanceInfo.attendanceRate >= 80 ? 'bg-green-100 text-green-800' :
+                              attendanceInfo.attendanceRate >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
                             }`}>
-                              {Math.min(attendanceInfo.attendanceRate + 15, 100)}%
+                              {attendanceInfo.attendanceRate}%
                             </span>
+                            {attendanceInfo.lastStatus && (
+                              <span className={`text-xs ${
+                                attendanceInfo.lastStatus === 'present' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                Last: {attendanceInfo.lastStatus}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {isAdmin && attendanceInfo.totalDays > 0 && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {attendanceInfo.presentDays}/{attendanceInfo.totalDays} days
+                            {attendanceInfo.daysSincePresent > 7 && (
+                              <span className="text-orange-600 ml-2">
+                                • {attendanceInfo.daysSincePresent}d ago
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
