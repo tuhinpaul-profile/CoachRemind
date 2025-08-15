@@ -45,7 +45,9 @@ export function AttendanceManagement() {
   const loadData = () => {
     const studentsData = StorageService.getStudents();
     const attendanceData = StorageService.getAttendance();
-    setStudents(studentsData);
+    // Only show students with active enrollment status
+    const activeStudents = studentsData.filter(student => student.enrollmentStatus === 'active');
+    setStudents(activeStudents);
     setAttendance(attendanceData);
   };
 
@@ -175,7 +177,7 @@ export function AttendanceManagement() {
   };
 
   const saveAttendance = () => {
-    console.log('Save button clicked! Grade filter:', gradeFilter);
+    console.log('Save function started - Grade filter:', gradeFilter);
     
     if (gradeFilter === 'all') {
       console.log('Blocking save - all grades selected');
@@ -184,9 +186,19 @@ export function AttendanceManagement() {
     }
 
     try {
-      console.log('Saving attendance for grade:', gradeFilter);
-      console.log('Current attendance data:', attendance);
+      console.log('Processing save for grade:', gradeFilter);
+      console.log('Filtered students count:', filteredStudents.length);
       
+      // Get attendance data for the selected date
+      const dayAttendance = attendance[selectedDate] || {};
+      const filteredStudentIds = filteredStudents.map(s => s.id);
+      
+      // Count attendance status for this grade
+      const presentCount = filteredStudentIds.filter(id => dayAttendance[id] === 'present').length;
+      const absentCount = filteredStudentIds.filter(id => dayAttendance[id] === 'absent').length;
+      const pendingCount = filteredStudents.length - presentCount - absentCount;
+      
+      // Save to storage
       StorageService.setAttendance(attendance);
       StorageService.addNotification({
         type: 'attendance',
@@ -194,13 +206,16 @@ export function AttendanceManagement() {
         read: false
       });
       
-      // Count how many students have attendance marked for this date in the filtered grade
-      const dayAttendance = attendance[selectedDate] || {};
-      const filteredStudentIds = filteredStudents.map(s => s.id);
-      const markedCount = filteredStudentIds.filter(id => dayAttendance[id]).length;
+      console.log('Save completed successfully');
       
-      console.log('Save successful! Marked count:', markedCount);
-      toast.success(`Attendance saved for ${gradeFilter}! ${markedCount} students recorded for ${new Date(selectedDate).toLocaleDateString()}`);
+      // Show detailed success message
+      const dateStr = new Date(selectedDate).toLocaleDateString();
+      toast.success(
+        `Attendance saved for ${gradeFilter} on ${dateStr}\n` +
+        `Present: ${presentCount}, Absent: ${absentCount}, Pending: ${pendingCount}\n` +
+        `Total active students: ${filteredStudents.length}`
+      );
+      
     } catch (error) {
       console.error('Error saving attendance:', error);
       toast.error('Failed to save attendance');
@@ -268,7 +283,11 @@ export function AttendanceManagement() {
               Mark All Absent
             </button>
             <button 
-              onClick={saveAttendance} 
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('Button clicked, calling saveAttendance');
+                saveAttendance();
+              }} 
               disabled={gradeFilter === 'all'}
               className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                 gradeFilter === 'all' 
