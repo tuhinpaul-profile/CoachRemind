@@ -1061,18 +1061,81 @@ export function StudentManagement() {
                         <div className="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
                           {student.grade} Grade
                         </div>
-                        {!isAdmin && (
+                        
+                        {/* Performance Metrics - Show for both admin and teacher */}
+                        <div className="space-y-1">
+                          {/* Attendance Performance */}
                           <div className="flex items-center space-x-2">
+                            <span className="text-xs text-muted-foreground font-medium">Attendance:</span>
                             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                              Math.min(attendanceInfo.attendanceRate + 15, 100) >= 85 ? 'bg-green-100 text-green-700' :
-                              Math.min(attendanceInfo.attendanceRate + 15, 100) >= 70 ? 'bg-yellow-100 text-yellow-700' :
+                              attendanceInfo.attendanceRate >= 85 ? 'bg-green-100 text-green-700' :
+                              attendanceInfo.attendanceRate >= 70 ? 'bg-yellow-100 text-yellow-700' :
                               'bg-red-100 text-red-700'
                             }`}>
-                              {Math.min(attendanceInfo.attendanceRate + 15, 100)}%
+                              {attendanceInfo.attendanceRate}%
                             </span>
                           </div>
-                        )}
 
+                          {/* Fee Payment Performance */}
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-muted-foreground font-medium">Fees:</span>
+                            <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
+                              feeStatus.status === 'paid' ? 'bg-green-100 text-green-700' :
+                              feeStatus.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {feeStatus.status === 'paid' ? 'Up to date' :
+                               feeStatus.status === 'pending' ? 'Pending' : 'Overdue'}
+                            </span>
+                          </div>
+
+                          {/* Overall Performance Score */}
+                          {(() => {
+                            const attendanceScore = attendanceInfo.attendanceRate >= 85 ? 3 : attendanceInfo.attendanceRate >= 70 ? 2 : 1;
+                            const feeScore = feeStatus.status === 'paid' ? 3 : feeStatus.status === 'pending' ? 2 : 1;
+                            const overallScore = Math.round((attendanceScore + feeScore) / 2);
+                            
+                            return (
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs text-muted-foreground font-medium">Overall:</span>
+                                <div className="flex space-x-0.5">
+                                  {[1, 2, 3].map(star => (
+                                    <div
+                                      key={star}
+                                      className={`w-3 h-3 rounded-full ${
+                                        star <= overallScore 
+                                          ? overallScore === 3 ? 'bg-green-400' : overallScore === 2 ? 'bg-yellow-400' : 'bg-red-400'
+                                          : 'bg-gray-200'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className={`text-xs font-medium ${
+                                  overallScore === 3 ? 'text-green-700' : overallScore === 2 ? 'text-yellow-700' : 'text-red-700'
+                                }`}>
+                                  {overallScore === 3 ? 'Excellent' : overallScore === 2 ? 'Good' : 'Needs Attention'}
+                                </span>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Additional metrics for admin */}
+                          {isAdmin && (
+                            <div className="flex items-center space-x-2 pt-1 border-t border-gray-100">
+                              <span className="text-xs text-muted-foreground">
+                                Last seen: {attendanceInfo.lastDate ? 
+                                  new Date(attendanceInfo.lastDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 
+                                  'Never'
+                                }
+                              </span>
+                              {attendanceInfo.daysSincePresent > 7 && (
+                                <span className="text-xs text-orange-600 font-medium">
+                                  ⚠️ {attendanceInfo.daysSincePresent}d absent
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
