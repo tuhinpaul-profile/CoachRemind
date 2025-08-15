@@ -1,0 +1,211 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(210 25% 7.8431%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(210 25% 7.8431%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(210 25% 7.8431%);
+  --primary: hsl(271.5 81% 56%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 25% 7.8431%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(240 1.9608% 90%);
+  --muted-foreground: hsl(210 25% 7.8431%);
+  --accent: hsl(270 100% 98%);
+  --accent-foreground: hsl(271.5 81% 56%);
+  --destructive: hsl(356.3033 90.5579% 54.3137%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(214.3 31.8% 91.4%);
+  --input: hsl(214.3 31.8% 91.4%);
+  --ring: hsl(271.5 81% 56%);
+  --chart-1: hsl(271.5 81% 56%);
+  --chart-2: hsl(159.7826 100% 36.0784%);
+  --chart-3: hsl(42.0290 92.8251% 56.2745%);
+  --chart-4: hsl(147.1429 78.5047% 41.9608%);
+  --chart-5: hsl(341.4894 75.2000% 50.9804%);
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(210 25% 7.8431%);
+  --sidebar-primary: hsl(271.5 81% 56%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(270 100% 98%);
+  --sidebar-accent-foreground: hsl(271.5 81% 56%);
+  --sidebar-border: hsl(214.3 31.8% 91.4%);
+  --sidebar-ring: hsl(271.5 81% 56%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 0.75rem;
+
+  /* Violet theme colors */
+  --violet-50: hsl(270 100% 98%);
+  --violet-100: hsl(269 100% 95%);
+  --violet-200: hsl(269 100% 92%);
+  --violet-300: hsl(268 100% 86%);
+  --violet-400: hsl(270 95% 75%);
+  --violet-500: hsl(271 81% 56%);
+  --violet-600: hsl(271 81% 56%);
+  --violet-700: hsl(272 72% 47%);
+  --violet-800: hsl(273 67% 39%);
+  --violet-900: hsl(274 66% 32%);
+  --violet-950: hsl(276 67% 21%);
+}
+
+.dark {
+  --background: hsl(0 0% 0%);
+  --foreground: hsl(200 6.6667% 91.1765%);
+  --card: hsl(228 9.8039% 10%);
+  --card-foreground: hsl(0 0% 85.0980%);
+  --popover: hsl(0 0% 0%);
+  --popover-foreground: hsl(200 6.6667% 91.1765%);
+  --primary: hsl(271 81% 56%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(195.0000 15.3846% 94.9020%);
+  --secondary-foreground: hsl(210 25% 7.8431%);
+  --muted: hsl(0 0% 9.4118%);
+  --muted-foreground: hsl(210 3.3898% 46.2745%);
+  --accent: hsl(228 9.8039% 10%);
+  --accent-foreground: hsl(271 81% 56%);
+  --destructive: hsl(356.3033 90.5579% 54.3137%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(210 5.2632% 14.9020%);
+  --input: hsl(207.6923 27.6596% 18.4314%);
+  --ring: hsl(271.5 81% 56%);
+  --sidebar: hsl(228 9.8039% 10%);
+  --sidebar-foreground: hsl(0 0% 85.0980%);
+  --sidebar-primary: hsl(271.5 81% 56%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(228 9.8039% 10%);
+  --sidebar-accent-foreground: hsl(271 81% 56%);
+  --sidebar-border: hsl(210 5.2632% 14.9020%);
+  --sidebar-ring: hsl(271.5 81% 56%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pulse-animation {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .sidebar-transition {
+    transition: transform 0.3s ease-in-out;
+  }
+}
+
+@layer components {
+  .toast {
+    @apply fixed top-4 right-4 z-50 rounded-lg border bg-background p-4 shadow-lg;
+  }
+
+  .toast-success {
+    @apply border-green-200 bg-green-50 text-green-800;
+  }
+
+  .toast-error {
+    @apply border-red-200 bg-red-50 text-red-800;
+  }
+
+  .toast-warning {
+    @apply border-orange-200 bg-orange-50 text-orange-800;
+  }
+
+  .toast-info {
+    @apply border-blue-200 bg-blue-50 text-blue-800;
+  }
+
+  .nav-link {
+    @apply flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-violet-50 hover:text-violet-600 transition-colors;
+  }
+
+  .nav-link.active {
+    @apply bg-violet-50 text-violet-600;
+  }
+
+  .btn-primary {
+    @apply bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .btn-warning {
+    @apply bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+  }
+
+  .stat-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+  }
+
+  .attendance-status-present {
+    @apply bg-green-50 border-green-200 text-green-800;
+  }
+
+  .attendance-status-absent {
+    @apply bg-red-50 border-red-200 text-red-800;
+  }
+
+  .attendance-status-pending {
+    @apply bg-gray-50 border-gray-200 text-gray-800;
+  }
+
+  .fee-status-paid {
+    @apply bg-green-50 border-green-200 text-green-800;
+  }
+
+  .fee-status-overdue {
+    @apply bg-red-50 border-red-200 text-red-800;
+  }
+
+  .fee-status-pending {
+    @apply bg-orange-50 border-orange-200 text-orange-800;
+  }
+}
