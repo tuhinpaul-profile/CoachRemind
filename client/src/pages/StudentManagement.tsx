@@ -251,6 +251,46 @@ export function StudentManagement() {
     return { status: 'paid', color: 'green' };
   };
 
+  const getStudentAttendanceInfo = (studentId: number) => {
+    const attendance = StorageService.getAttendance();
+    const allDates = Object.keys(attendance).sort();
+    const studentRecords = allDates.map(date => attendance[date]?.[studentId] || null).filter(Boolean);
+    
+    const totalDays = studentRecords.length;
+    const presentDays = studentRecords.filter(status => status === 'present').length;
+    const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+    
+    // Find last attendance status and date
+    let lastAttendanceStatus = null;
+    let lastAttendanceDate = null;
+    for (let i = allDates.length - 1; i >= 0; i--) {
+      const date = allDates[i];
+      const status = attendance[date]?.[studentId];
+      if (status) {
+        lastAttendanceStatus = status;
+        lastAttendanceDate = date;
+        break;
+      }
+    }
+    
+    // Calculate days since last present
+    let daysSincePresent = 0;
+    if (lastAttendanceDate) {
+      const lastDate = new Date(lastAttendanceDate);
+      const today = new Date();
+      daysSincePresent = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    
+    return {
+      attendanceRate,
+      lastStatus: lastAttendanceStatus,
+      lastDate: lastAttendanceDate,
+      daysSincePresent,
+      totalDays,
+      presentDays
+    };
+  };
+
   const grades = ['6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
   return (
@@ -265,7 +305,10 @@ export function StudentManagement() {
                 : `View student information and manage status (requires admin approval)`
               }
             </p>
-            <p className="text-sm text-muted-foreground mt-1">Total: {students.length} students enrolled • Showing: {filteredStudents.length}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Total: {students.length} students enrolled • Showing: {filteredStudents.length}
+              {!isAdmin && ` • Active: ${students.filter(s => s.status === 'active').length} • Inactive: ${students.filter(s => s.status === 'inactive').length}`}
+            </p>
           </div>
           <div className="flex items-center space-x-4">
             {isAdmin && selectedStudents.size > 0 && (
@@ -366,6 +409,11 @@ export function StudentManagement() {
                     Fee Status
                   </th>
                 )}
+                {!isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Attendance
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
@@ -377,6 +425,7 @@ export function StudentManagement() {
             <tbody className="bg-card divide-y divide-border" data-testid="students-table-body">
               {paginatedStudents.map((student) => {
                 const feeStatus = getStudentFeeStatus(student.id);
+                const attendanceInfo = getStudentAttendanceInfo(student.id);
                 
                 return (
                   <tr key={student.id} data-testid={`student-row-${student.id}`} className={selectedStudents.has(student.id) ? 'bg-muted/30' : ''}>
@@ -416,6 +465,38 @@ export function StudentManagement() {
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full fee-status-${feeStatus.status}`}>
                           {feeStatus.status.charAt(0).toUpperCase() + feeStatus.status.slice(1)}
                         </span>
+                      </td>
+                    )}
+                    {!isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm">
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              attendanceInfo.attendanceRate >= 80 ? 'bg-green-100 text-green-800' :
+                              attendanceInfo.attendanceRate >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {attendanceInfo.attendanceRate}%
+                            </span>
+                            {attendanceInfo.lastStatus && (
+                              <span className={`text-xs ${
+                                attendanceInfo.lastStatus === 'present' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                Last: {attendanceInfo.lastStatus}
+                              </span>
+                            )}
+                          </div>
+                          {attendanceInfo.totalDays > 0 && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {attendanceInfo.presentDays}/{attendanceInfo.totalDays} days
+                              {attendanceInfo.daysSincePresent > 7 && (
+                                <span className="text-orange-600 ml-2">
+                                  • {attendanceInfo.daysSincePresent}d ago
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
