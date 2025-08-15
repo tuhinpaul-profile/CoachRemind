@@ -6,16 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddStudentModal } from "@/components/Modals/AddStudentModal";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useToast } from "@/hooks/useToast";
 
 export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const [fees, setFees] = useState<Fee[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [paginatedStudents, setPaginatedStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [selectedStudents, setSelectedStudents] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -25,6 +30,10 @@ export function StudentManagement() {
   useEffect(() => {
     filterStudents();
   }, [students, searchTerm, gradeFilter, statusFilter]);
+
+  useEffect(() => {
+    paginateStudents();
+  }, [filteredStudents, currentPage, pageSize]);
 
   const loadData = () => {
     const studentsData = StorageService.getStudents();
@@ -53,6 +62,71 @@ export function StudentManagement() {
     }
 
     setFilteredStudents(filtered);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const paginateStudents = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    setPaginatedStudents(filteredStudents.slice(startIndex, endIndex));
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
+  const toggleStudentSelection = (studentId: number) => {
+    const newSelected = new Set(selectedStudents);
+    if (newSelected.has(studentId)) {
+      newSelected.delete(studentId);
+    } else {
+      newSelected.add(studentId);
+    }
+    setSelectedStudents(newSelected);
+  };
+
+  const toggleAllSelection = () => {
+    if (selectedStudents.size === paginatedStudents.length) {
+      setSelectedStudents(new Set());
+    } else {
+      setSelectedStudents(new Set(paginatedStudents.map(s => s.id)));
+    }
+  };
+
+  const bulkDeleteStudents = () => {
+    if (selectedStudents.size === 0) {
+      toast.error('Please select students to delete');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedStudents.size} students? This will also remove all their records.`)) {
+      return;
+    }
+
+    const updatedStudents = students.filter(s => !selectedStudents.has(s.id));
+    const updatedFees = fees.filter(f => !selectedStudents.has(f.studentId));
+    
+    // Remove from attendance records
+    const attendance = StorageService.getAttendance();
+    Object.keys(attendance).forEach(date => {
+      selectedStudents.forEach(studentId => {
+        delete attendance[date][studentId];
+      });
+    });
+
+    setStudents(updatedStudents);
+    setFees(updatedFees);
+    StorageService.setStudents(updatedStudents);
+    StorageService.setFees(updatedFees);
+    StorageService.setAttendance(attendance);
+    setSelectedStudents(new Set());
+
+    toast.success(`${selectedStudents.size} students deleted successfully`);
   };
 
   const handleAddStudent = (studentData: Omit<Student, 'id'>) => {
@@ -160,10 +234,21 @@ export function StudentManagement() {
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Student Management</h3>
-            <p className="text-sm text-gray-500">Total: {students.length} students enrolled</p>
+            <h3 className="text-lg font-semibold text-foreground">Student Management</h3>
+            <p className="text-sm text-muted-foreground">Total: {students.length} students enrolled • Showing: {filteredStudents.length}</p>
           </div>
           <div className="flex items-center space-x-4">
+            {selectedStudents.size > 0 && (
+              <Button
+                onClick={bulkDeleteStudents}
+                variant="destructive"
+                className="flex items-center space-x-2"
+                data-testid="button-bulk-delete"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Selected ({selectedStudents.size})</span>
+              </Button>
+            )}
             <Button
               onClick={exportStudents}
               variant="outline"
@@ -187,7 +272,7 @@ export function StudentManagement() {
         {/* Search and Filters */}
         <div className="mb-4 flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               type="text"
               placeholder="Search students by name, email, or roll number..."
@@ -224,35 +309,51 @@ export function StudentManagement() {
 
         {/* Students Table */}
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    checked={paginatedStudents.length > 0 && selectedStudents.size === paginatedStudents.length}
+                    onChange={toggleAllSelection}
+                    className="rounded border-gray-300"
+                  />
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Student
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Grade
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Contact
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Fee Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200" data-testid="students-table-body">
-              {filteredStudents.map((student) => {
+            <tbody className="bg-card divide-y divide-border" data-testid="students-table-body">
+              {paginatedStudents.map((student) => {
                 const feeStatus = getStudentFeeStatus(student.id);
                 
                 return (
-                  <tr key={student.id} data-testid={`student-row-${student.id}`}>
+                  <tr key={student.id} data-testid={`student-row-${student.id}`} className={selectedStudents.has(student.id) ? 'bg-muted/30' : ''}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.has(student.id)}
+                        onChange={() => toggleStudentSelection(student.id)}
+                        className="rounded border-gray-300"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center">
@@ -261,20 +362,20 @@ export function StudentManagement() {
                           </span>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900" data-testid={`student-name-${student.id}`}>
+                          <div className="text-sm font-medium text-foreground" data-testid={`student-name-${student.id}`}>
                             {student.name}
                           </div>
-                          <div className="text-sm text-gray-500">Roll: {student.rollNumber}</div>
-                          <div className="text-sm text-gray-500">{student.email}</div>
+                          <div className="text-sm text-muted-foreground">Roll: {student.rollNumber}</div>
+                          <div className="text-sm text-muted-foreground">{student.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       {student.grade}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.phone}</div>
-                      <div className="text-sm text-gray-500">{student.parentPhone}</div>
+                      <div className="text-sm text-foreground">{student.phone}</div>
+                      <div className="text-sm text-muted-foreground">{student.parentPhone}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full fee-status-${feeStatus.status}`}>
@@ -321,13 +422,25 @@ export function StudentManagement() {
 
         {filteredStudents.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-500 text-lg">No students found</div>
-            <div className="text-gray-400 text-sm mt-2">
+            <div className="text-muted-foreground text-lg">No students found</div>
+            <div className="text-muted-foreground/70 text-sm mt-2">
               {searchTerm || gradeFilter || statusFilter
                 ? 'Try adjusting your search or filters'
                 : 'Add your first student to get started'}
             </div>
           </div>
+        )}
+
+        {/* Pagination */}
+        {filteredStudents.length > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredStudents.length / pageSize)}
+            pageSize={pageSize}
+            totalItems={filteredStudents.length}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         )}
       </div>
 

@@ -19,6 +19,8 @@ import { EmailService } from "@/lib/emailService";
 import { initializeSampleData } from "@/lib/sampleData";
 import { useToast, ToastContainer } from "@/hooks/useToast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -129,13 +131,17 @@ function App() {
 
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Router />
-          <Toaster />
-          <ToastContainer toasts={toasts} onRemove={removeToast} />
-        </TooltipProvider>
-      </QueryClientProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <ProtectedRoute>
+              <Router />
+            </ProtectedRoute>
+            <Toaster />
+            <ToastContainer toasts={toasts} onRemove={removeToast} />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

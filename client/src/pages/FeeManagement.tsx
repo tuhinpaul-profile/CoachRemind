@@ -7,15 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddFeeModal } from "@/components/Modals/AddFeeModal";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useToast } from "@/hooks/useToast";
 
 export function FeeManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const [fees, setFees] = useState<Fee[]>([]);
   const [filteredFees, setFilteredFees] = useState<Fee[]>([]);
+  const [paginatedFees, setPaginatedFees] = useState<Fee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [stats, setStats] = useState<FeeStats>({
     totalOutstanding: 0,
     monthlyCollection: 0,
@@ -34,6 +38,10 @@ export function FeeManagement() {
     filterFees();
     calculateStats();
   }, [fees, students, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    paginateFees();
+  }, [filteredFees, currentPage, pageSize]);
 
   const loadData = () => {
     const studentsData = StorageService.getStudents();
@@ -68,6 +76,22 @@ export function FeeManagement() {
     }
 
     setFilteredFees(filtered);
+    setCurrentPage(1);
+  };
+
+  const paginateFees = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    setPaginatedFees(filteredFees.slice(startIndex, endIndex));
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
 
   const calculateStats = () => {
@@ -337,8 +361,8 @@ export function FeeManagement() {
         </div>
 
         {/* Fee List */}
-        <div className="space-y-3 max-h-96 overflow-y-auto" data-testid="fee-list">
-          {filteredFees.map(fee => {
+        <div className="space-y-3" data-testid="fee-list">
+          {paginatedFees.map(fee => {
             const student = students.find(s => s.id === fee.studentId);
             if (!student) return null;
 
@@ -414,13 +438,25 @@ export function FeeManagement() {
 
         {filteredFees.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-500 text-lg">No fee records found</div>
-            <div className="text-gray-400 text-sm mt-2">
+            <div className="text-muted-foreground text-lg">No fee records found</div>
+            <div className="text-muted-foreground/70 text-sm mt-2">
               {searchTerm || statusFilter
                 ? 'Try adjusting your search or filters'
                 : 'Add fee records to get started'}
             </div>
           </div>
+        )}
+
+        {/* Pagination */}
+        {filteredFees.length > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredFees.length / pageSize)}
+            pageSize={pageSize}
+            totalItems={filteredFees.length}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         )}
       </div>
 

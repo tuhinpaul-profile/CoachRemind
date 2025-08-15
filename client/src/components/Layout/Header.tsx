@@ -1,8 +1,10 @@
-import { Bell, Sun, Moon } from "lucide-react";
+import { Bell, Sun, Moon, LogOut, User } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   title: string;
@@ -12,6 +14,7 @@ interface HeaderProps {
 export function Header({ title, subtitle }: HeaderProps) {
   const [notificationCount, setNotificationCount] = useState(0);
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const updateNotificationCount = () => {
@@ -69,15 +72,33 @@ export function Header({ title, subtitle }: HeaderProps) {
               )}
             </button>
           </div>
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-foreground">Admin User</p>
-              <p className="text-xs text-muted-foreground">Excellence Coaching</p>
-            </div>
-            <div className="w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-medium text-sm">A</span>
-            </div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 transition-colors">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-foreground">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.role} • Excellence Coaching</p>
+                </div>
+                <div className="w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-medium text-sm">{user?.name.charAt(0)}</span>
+                </div>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem className="flex items-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={logout}
+                className="flex items-center space-x-2 text-red-600 focus:text-red-600"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

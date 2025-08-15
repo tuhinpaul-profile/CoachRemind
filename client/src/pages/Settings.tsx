@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Save, Upload, Download, AlertTriangle, RotateCcw } from "lucide-react";
+import { Save, Upload, Download, AlertTriangle, RotateCcw, User, Lock } from "lucide-react";
 import { StorageService } from "@/lib/storage";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ interface Settings {
 }
 
 export function Settings() {
+  const { user } = useAuth();
   const [settings, setSettings] = useState<Settings>({
     centerName: 'Excellence Coaching Center',
     centerEmail: 'admin@excellencecoaching.com',
@@ -31,6 +33,13 @@ export function Settings() {
     feeDueDate: 10,
   });
   const [hasChanges, setHasChanges] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -150,8 +159,109 @@ export function Settings() {
     }, 1000);
   };
 
+  const handleProfileUpdate = () => {
+    if (profileData.newPassword && profileData.newPassword !== profileData.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    
+    if (profileData.newPassword && profileData.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+    
+    // In a real app, this would make an API call
+    toast.success('Profile updated successfully');
+    setProfileData(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+  };
+
   return (
     <div className="space-y-6">
+      {/* Profile Management */}
+      <div className="card">
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="w-12 h-12 bg-violet-500 rounded-full flex items-center justify-center">
+            <User className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">Profile Management</h3>
+            <p className="text-sm text-muted-foreground">Manage your account information and security</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h4 className="font-medium text-foreground flex items-center space-x-2">
+              <User className="w-4 h-4" />
+              <span>Account Information</span>
+            </h4>
+            <div>
+              <Label htmlFor="profileName">Full Name</Label>
+              <Input
+                id="profileName"
+                value={profileData.name}
+                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                placeholder="Enter your full name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="profileEmail">Email Address</Label>
+              <Input
+                id="profileEmail"
+                type="email"
+                value={profileData.email}
+                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                placeholder="Enter your email"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              <p><strong>Role:</strong> {user?.role?.charAt(0).toUpperCase()}{user?.role?.slice(1)}</p>
+              <p><strong>Last Login:</strong> {user?.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="font-medium text-foreground flex items-center space-x-2">
+              <Lock className="w-4 h-4" />
+              <span>Change Password</span>
+            </h4>
+            <div>
+              <Label htmlFor="currentPassword">Current Password</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={profileData.currentPassword}
+                onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
+                placeholder="Enter current password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={profileData.newPassword}
+                onChange={(e) => setProfileData({ ...profileData, newPassword: e.target.value })}
+                placeholder="Enter new password (min 6 characters)"
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={profileData.confirmPassword}
+                onChange={(e) => setProfileData({ ...profileData, confirmPassword: e.target.value })}
+                placeholder="Confirm new password"
+              />
+            </div>
+            <Button onClick={handleProfileUpdate} className="btn-primary w-full">
+              Update Profile
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* General Settings */}
       <div className="card">
         <div className="flex items-center justify-between mb-6">

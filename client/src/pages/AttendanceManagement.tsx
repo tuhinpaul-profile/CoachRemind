@@ -6,15 +6,19 @@ import { Student, AttendanceRecord, AttendanceStats } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useToast } from "@/hooks/useToast";
 
 export function AttendanceManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord>({});
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [paginatedStudents, setPaginatedStudents] = useState<Student[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [stats, setStats] = useState<AttendanceStats>({ present: 0, absent: 0, pending: 0 });
   const { toast } = useToast();
 
@@ -26,6 +30,10 @@ export function AttendanceManagement() {
     filterStudents();
     calculateStats();
   }, [students, attendance, selectedDate, searchTerm, gradeFilter]);
+
+  useEffect(() => {
+    paginateStudents();
+  }, [filteredStudents, currentPage, pageSize]);
 
   const loadData = () => {
     const studentsData = StorageService.getStudents();
@@ -49,6 +57,22 @@ export function AttendanceManagement() {
     }
 
     setFilteredStudents(filtered);
+    setCurrentPage(1);
+  };
+
+  const paginateStudents = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    setPaginatedStudents(filteredStudents.slice(startIndex, endIndex));
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
 
   const calculateStats = () => {
@@ -211,8 +235,8 @@ export function AttendanceManagement() {
         </div>
 
         {/* Attendance List */}
-        <div className="space-y-2 max-h-96 overflow-y-auto" data-testid="attendance-list">
-          {filteredStudents.map(student => {
+        <div className="space-y-2" data-testid="attendance-list">
+          {paginatedStudents.map(student => {
             const status = getAttendanceStatus(student.id);
             const statusColors = {
               present: 'attendance-status-present',
@@ -259,6 +283,18 @@ export function AttendanceManagement() {
             );
           })}
         </div>
+
+        {/* Pagination */}
+        {filteredStudents.length > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredStudents.length / pageSize)}
+            pageSize={pageSize}
+            totalItems={filteredStudents.length}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
       </div>
     </div>
   );
