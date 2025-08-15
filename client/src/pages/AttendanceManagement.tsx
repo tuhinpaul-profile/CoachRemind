@@ -174,14 +174,19 @@ export function AttendanceManagement() {
     toast.warning(`All ${filteredStudents.length} students in ${gradeFilter} marked absent`);
   };
 
-  const saveAttendance = async () => {
+  const saveAttendance = () => {
+    console.log('Save button clicked! Grade filter:', gradeFilter);
+    
     if (gradeFilter === 'all') {
+      console.log('Blocking save - all grades selected');
       toast.error('Please select a specific grade to save attendance');
       return;
     }
 
     try {
       console.log('Saving attendance for grade:', gradeFilter);
+      console.log('Current attendance data:', attendance);
+      
       StorageService.setAttendance(attendance);
       StorageService.addNotification({
         type: 'attendance',
@@ -194,6 +199,7 @@ export function AttendanceManagement() {
       const filteredStudentIds = filteredStudents.map(s => s.id);
       const markedCount = filteredStudentIds.filter(id => dayAttendance[id]).length;
       
+      console.log('Save successful! Marked count:', markedCount);
       toast.success(`Attendance saved for ${gradeFilter}! ${markedCount} students recorded for ${new Date(selectedDate).toLocaleDateString()}`);
     } catch (error) {
       console.error('Error saving attendance:', error);
