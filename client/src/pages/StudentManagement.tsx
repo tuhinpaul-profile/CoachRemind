@@ -196,16 +196,37 @@ export function StudentManagement() {
   };
 
   const handleToggleStatus = (studentId: number) => {
-    const updatedStudents = students.map(student => {
-      if (student.id === studentId) {
-        return { ...student, status: student.status === 'active' ? 'inactive' : 'active' as 'active' | 'inactive' };
-      }
-      return student;
-    });
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
 
-    setStudents(updatedStudents);
-    StorageService.setStudents(updatedStudents);
-    toast.success('Student status updated');
+    const newStatus = student.status === 'active' ? 'inactive' : 'active';
+
+    if (isAdmin) {
+      // Admin can directly update status
+      const updatedStudents = students.map(s => {
+        if (s.id === studentId) {
+          return { ...s, status: newStatus as 'active' | 'inactive' };
+        }
+        return s;
+      });
+
+      setStudents(updatedStudents);
+      StorageService.setStudents(updatedStudents);
+      toast.success(`Student status updated to ${newStatus}`);
+    } else {
+      // Teacher submits for approval
+      const updatedStudent = { ...student, status: newStatus as 'active' | 'inactive' };
+      
+      StorageService.addPendingApproval({
+        type: 'student_edit',
+        teacherName: user?.name || 'Teacher',
+        teacherId: user?.id || 0,
+        data: updatedStudent,
+        description: `Change ${student.name}'s status from ${student.status} to ${newStatus}`
+      });
+
+      toast.success(`Status change submitted for admin approval: ${student.name} to be marked as ${newStatus}`);
+    }
   };
 
   const exportStudents = () => {
@@ -238,7 +259,13 @@ export function StudentManagement() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-foreground">Student Management</h3>
-            <p className="text-sm text-muted-foreground">Total: {students.length} students enrolled • Showing: {filteredStudents.length}</p>
+            <p className="text-sm text-muted-foreground">
+              {isAdmin 
+                ? `Add, edit, and manage student information`
+                : `View student information and manage status (requires admin approval)`
+              }
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">Total: {students.length} students enrolled • Showing: {filteredStudents.length}</p>
           </div>
           <div className="flex items-center space-x-4">
             {isAdmin && selectedStudents.size > 0 && (
@@ -334,9 +361,11 @@ export function StudentManagement() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Contact
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Fee Status
-                </th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Fee Status
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
@@ -382,11 +411,13 @@ export function StudentManagement() {
                       <div className="text-sm text-foreground">{student.phone}</div>
                       <div className="text-sm text-muted-foreground">{student.parentPhone}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full fee-status-${feeStatus.status}`}>
-                        {feeStatus.status.charAt(0).toUpperCase() + feeStatus.status.slice(1)}
-                      </span>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full fee-status-${feeStatus.status}`}>
+                          {feeStatus.status.charAt(0).toUpperCase() + feeStatus.status.slice(1)}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => handleToggleStatus(student.id)}
@@ -419,6 +450,11 @@ export function StudentManagement() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
+                        )}
+                        {!isAdmin && (
+                          <span className="text-muted-foreground text-xs">
+                            Status changes require admin approval
+                          </span>
                         )}
                       </div>
                     </td>
