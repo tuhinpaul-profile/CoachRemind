@@ -24,6 +24,8 @@ export function AttendanceManagement() {
   const [pageSize, setPageSize] = useState(25);
   const [stats, setStats] = useState<AttendanceStats>({ present: 0, absent: 0, pending: 0 });
   const [pendingAttendance, setPendingAttendance] = useState<{[key: string]: 'present' | 'absent'}>({});
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'pending'>('saved');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,6 +40,18 @@ export function AttendanceManagement() {
     calculateStats();
   }, [filteredStudents, attendance, selectedDate]);
 
+  // Auto-save when attendance changes
+  useEffect(() => {
+    if (Object.keys(attendance).length > 0) {
+      setAutoSaveStatus('pending');
+      const saveTimer = setTimeout(() => {
+        autoSaveAttendance();
+      }, 1000); // Auto-save after 1 second of inactivity
+      
+      return () => clearTimeout(saveTimer);
+    }
+  }, [attendance]);
+
   useEffect(() => {
     paginateStudents();
   }, [filteredStudents, currentPage, pageSize]);
@@ -51,21 +65,51 @@ export function AttendanceManagement() {
     if (studentsData.length === 0) {
       console.log('No students found, creating sample data');
       const sampleStudents = [
-        { id: 1, name: 'Kavya Kapoor', rollNumber: '8-016', grade: '8th', enrollmentStatus: 'active', phone: '9876543210', email: 'kavya@example.com', parentName: 'Mr. Kapoor', address: 'Mumbai, India' },
-        { id: 2, name: 'Pari Mehta', rollNumber: '8-020', grade: '8th', enrollmentStatus: 'active', phone: '9876543211', email: 'pari@example.com', parentName: 'Mrs. Mehta', address: 'Delhi, India' },
-        { id: 3, name: 'Sai Singh', rollNumber: '9-005', grade: '9th', enrollmentStatus: 'active', phone: '9876543212', email: 'sai@example.com', parentName: 'Mr. Singh', address: 'Bangalore, India' },
-        { id: 4, name: 'Arjun Sharma', rollNumber: '10-012', grade: '10th', enrollmentStatus: 'active', phone: '9876543213', email: 'arjun@example.com', parentName: 'Mrs. Sharma', address: 'Chennai, India' },
-        { id: 5, name: 'Priya Gupta', rollNumber: '7-008', grade: '7th', enrollmentStatus: 'active', phone: '9876543214', email: 'priya@example.com', parentName: 'Mr. Gupta', address: 'Kolkata, India' }
+        { 
+          id: 1, name: 'Kavya Kapoor', rollNumber: '8-016', grade: '8th', 
+          phone: '9876543210', email: 'kavya@example.com', 
+          parentEmail: 'kapoor@example.com', parentPhone: '9876543210',
+          monthlyFee: 2500, status: 'active' as const,
+          enrollmentDate: '2024-01-15'
+        },
+        { 
+          id: 2, name: 'Pari Mehta', rollNumber: '8-020', grade: '8th', 
+          phone: '9876543211', email: 'pari@example.com', 
+          parentEmail: 'mehta@example.com', parentPhone: '9876543211',
+          monthlyFee: 2500, status: 'active' as const,
+          enrollmentDate: '2024-01-20'
+        },
+        { 
+          id: 3, name: 'Sai Singh', rollNumber: '9-005', grade: '9th', 
+          phone: '9876543212', email: 'sai@example.com', 
+          parentEmail: 'singh@example.com', parentPhone: '9876543212',
+          monthlyFee: 2500, status: 'active' as const,
+          enrollmentDate: '2024-02-01'
+        },
+        { 
+          id: 4, name: 'Arjun Sharma', rollNumber: '10-012', grade: '10th', 
+          phone: '9876543213', email: 'arjun@example.com', 
+          parentEmail: 'sharma@example.com', parentPhone: '9876543213',
+          monthlyFee: 2500, status: 'active' as const,
+          enrollmentDate: '2024-02-10'
+        },
+        { 
+          id: 5, name: 'Priya Gupta', rollNumber: '7-008', grade: '7th', 
+          phone: '9876543214', email: 'priya@example.com', 
+          parentEmail: 'gupta@example.com', parentPhone: '9876543214',
+          monthlyFee: 2500, status: 'active' as const,
+          enrollmentDate: '2024-01-25'
+        }
       ];
       StorageService.setStudents(sampleStudents);
       studentsData = sampleStudents;
     }
     
-    console.log('Students with enrollment status:', studentsData.map(s => ({ id: s.id, name: s.name, enrollmentStatus: s.enrollmentStatus })));
+    console.log('Students with status:', studentsData.map(s => ({ id: s.id, name: s.name, status: s.status })));
     
-    // Only show students with active enrollment status
+    // Only show students with active status
     const activeStudents = studentsData.filter(student => 
-      !student.enrollmentStatus || student.enrollmentStatus === 'active'
+      !student.status || student.status === 'active'
     );
     console.log('Active students:', activeStudents.length);
     setStudents(activeStudents);
@@ -197,49 +241,34 @@ export function AttendanceManagement() {
     toast.warning(`All ${filteredStudents.length} students in ${gradeFilter} marked absent`);
   };
 
-  const saveAttendance = () => {
-    console.log('Save function started - Grade filter:', gradeFilter);
+  const autoSaveAttendance = () => {
+    setAutoSaveStatus('saving');
     
-    if (gradeFilter === 'all') {
-      console.log('Blocking save - all grades selected');
-      toast.error('Please select a specific grade to save attendance');
-      return;
-    }
-
     try {
-      console.log('Processing save for grade:', gradeFilter);
-      console.log('Filtered students count:', filteredStudents.length);
-      
-      // Get attendance data for the selected date
-      const dayAttendance = attendance[selectedDate] || {};
-      const filteredStudentIds = filteredStudents.map(s => s.id);
-      
-      // Count attendance status for this grade
-      const presentCount = filteredStudentIds.filter(id => dayAttendance[id] === 'present').length;
-      const absentCount = filteredStudentIds.filter(id => dayAttendance[id] === 'absent').length;
-      const pendingCount = filteredStudents.length - presentCount - absentCount;
-      
-      // Save to storage
+      console.log('Auto-saving attendance data');
       StorageService.setAttendance(attendance);
-      StorageService.addNotification({
-        type: 'attendance',
-        message: `Attendance saved for ${gradeFilter} on ${new Date(selectedDate).toLocaleDateString()}`,
-        read: false
-      });
+      setLastSaved(new Date());
+      setAutoSaveStatus('saved');
       
-      console.log('Save completed successfully');
-      
-      // Show detailed success message
-      const dateStr = new Date(selectedDate).toLocaleDateString();
-      toast.success(
-        `Attendance saved for ${gradeFilter} on ${dateStr}\n` +
-        `Present: ${presentCount}, Absent: ${absentCount}, Pending: ${pendingCount}\n` +
-        `Total active students: ${filteredStudents.length}`
-      );
+      // Add notification for significant changes (when a full grade is processed)
+      if (gradeFilter !== 'all') {
+        const dayAttendance = attendance[selectedDate] || {};
+        const filteredStudentIds = filteredStudents.map(s => s.id);
+        const markedCount = filteredStudentIds.filter(id => dayAttendance[id]).length;
+        
+        if (markedCount > 0) {
+          StorageService.addNotification({
+            type: 'attendance',
+            message: `Attendance updated for ${gradeFilter} - ${markedCount} students marked`,
+            read: false
+          });
+        }
+      }
       
     } catch (error) {
-      console.error('Error saving attendance:', error);
-      toast.error('Failed to save attendance');
+      console.error('Auto-save failed:', error);
+      setAutoSaveStatus('pending');
+      toast.error('Auto-save failed - please check your connection');
     }
   };
 
@@ -303,22 +332,26 @@ export function AttendanceManagement() {
             >
               Mark All Absent
             </button>
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('Button clicked, calling saveAttendance');
-                saveAttendance();
-              }} 
-              disabled={gradeFilter === 'all'}
-              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                gradeFilter === 'all' 
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                  : 'bg-violet-600 hover:bg-violet-700 text-white'
-              }`} 
-              data-testid="button-save-attendance"
-            >
-              Save Attendance
-            </button>
+            <div className="flex items-center space-x-2">
+              <div className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm ${
+                autoSaveStatus === 'saved' ? 'bg-green-50 text-green-700' :
+                autoSaveStatus === 'saving' ? 'bg-blue-50 text-blue-700' :
+                'bg-orange-50 text-orange-700'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${
+                  autoSaveStatus === 'saved' ? 'bg-green-500' :
+                  autoSaveStatus === 'saving' ? 'bg-blue-500 animate-pulse' :
+                  'bg-orange-500'
+                }`}></div>
+                <span>
+                  {autoSaveStatus === 'saved' && lastSaved ? 
+                    `Auto-saved ${lastSaved.toLocaleTimeString()}` :
+                    autoSaveStatus === 'saving' ? 'Saving...' :
+                    'Pending save'
+                  }
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
