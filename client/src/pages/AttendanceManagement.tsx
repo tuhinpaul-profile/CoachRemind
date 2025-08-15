@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, X, Search, Filter } from "lucide-react";
+import { Check, X, Search, Filter, Clock } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { EmailService } from "@/lib/emailService";
 import { Student, AttendanceRecord, AttendanceStats } from "@/types";
@@ -8,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AttendanceManagement() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord>({});
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
@@ -20,6 +23,7 @@ export function AttendanceManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [stats, setStats] = useState<AttendanceStats>({ present: 0, absent: 0, pending: 0 });
+  const [pendingAttendance, setPendingAttendance] = useState<{[key: string]: 'present' | 'absent'}>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,31 +89,59 @@ export function AttendanceManagement() {
   };
 
   const markAttendance = async (studentId: number, status: 'present' | 'absent') => {
-    const updatedAttendance = {
-      ...attendance,
-      [selectedDate]: {
-        ...attendance[selectedDate],
-        [studentId]: status
-      }
-    };
+    if (isAdmin) {
+      // Admin can directly update attendance
+      const updatedAttendance = {
+        ...attendance,
+        [selectedDate]: {
+          ...attendance[selectedDate],
+          [studentId]: status
+        }
+      };
 
-    setAttendance(updatedAttendance);
-    StorageService.setAttendance(updatedAttendance);
+      setAttendance(updatedAttendance);
+      StorageService.setAttendance(updatedAttendance);
 
-    // Send automatic notification for absent students
-    if (status === 'absent') {
-      const student = students.find(s => s.id === studentId);
-      if (student) {
-        try {
-          await EmailService.sendAbsenceNotification(student, selectedDate);
-          toast.success(`Absence notification sent to ${student.name}'s parent`);
-        } catch (error) {
-          console.error('Failed to send absence notification:', error);
+      // Send automatic notification for absent students
+      if (status === 'absent') {
+        const student = students.find(s => s.id === studentId);
+        if (student) {
+          try {
+            await EmailService.sendAbsenceNotification(student, selectedDate);
+            toast.success(`Absence notification sent to ${student.name}'s parent`);
+          } catch (error) {
+            console.error('Failed to send absence notification:', error);
+          }
         }
       }
-    }
 
-    toast.success(`Attendance marked as ${status}`);
+      toast.success(`Attendance marked as ${status}`);
+    } else {
+      // Teacher submits for approval
+      const attendanceData = {
+        [selectedDate]: {
+          ...attendance[selectedDate],
+          [studentId]: status
+        }
+      };
+
+      const student = students.find(s => s.id === studentId);
+      StorageService.addPendingApproval({
+        type: 'attendance',
+        teacherName: user?.name || 'Teacher',
+        teacherId: user?.id || 0,
+        data: attendanceData,
+        description: `Mark ${student?.name} as ${status} on ${selectedDate}`
+      });
+
+      // Update local pending state for UI feedback
+      setPendingAttendance(prev => ({
+        ...prev,
+        [`${selectedDate}-${studentId}`]: status
+      }));
+
+      toast.success(`Attendance submitted for admin approval: ${student?.name} marked as ${status}`);
+    }
   };
 
   const markAllPresent = () => {

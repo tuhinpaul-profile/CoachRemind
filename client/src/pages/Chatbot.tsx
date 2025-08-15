@@ -1,19 +1,25 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, MessageSquare, Settings, Zap, AlertCircle } from "lucide-react";
+import { Send, MessageSquare, Settings, Zap, AlertCircle, Mail } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { ChatbotService } from "@/lib/chatbotService";
 import { ChatMessage } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Chatbot() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isApiConnected, setIsApiConnected] = useState(false);
+  const [adminMessage, setAdminMessage] = useState('');
+  const [adminMessageSubject, setAdminMessageSubject] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -26,10 +32,14 @@ export function Chatbot() {
     }
 
     // Initialize with welcome message
+    const welcomeMessage = isAdmin 
+      ? "Hello! I'm your AI assistant for Excellence Coaching Center. I can help you with student queries, attendance tracking, fee management, and generate reports. What would you like to know?"
+      : "Hello! I'm your teaching assistant. I can help you with student information, attendance queries, and answer general questions about the coaching center. What would you like to know?";
+    
     setMessages([{
       id: 1,
       sender: 'assistant',
-      message: "Hello! I'm your AI assistant for Excellence Coaching Center. I can help you with student queries, attendance tracking, fee management, and generate reports. What would you like to know?",
+      message: welcomeMessage,
       timestamp: new Date().toISOString()
     }]);
   }, []);
@@ -135,6 +145,23 @@ export function Chatbot() {
     toast.success('Chat history cleared');
   };
 
+  const handleSendAdminMessage = () => {
+    if (!adminMessage.trim() || !adminMessageSubject.trim()) return;
+    
+    // Add notification for admin
+    StorageService.addNotification({
+      type: 'info',
+      message: `New message from ${user?.name}: ${adminMessageSubject}`,
+      read: false
+    });
+    
+    // Clear the form
+    setAdminMessage('');
+    setAdminMessageSubject('');
+    
+    toast.success('Message sent to admin successfully');
+  };
+
   const quickQueries = [
     "Show me today's attendance summary",
     "Which students have overdue fees?",
@@ -154,7 +181,9 @@ export function Chatbot() {
               <MessageSquare className="w-5 h-5 text-violet-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Admin Chatbot Assistant</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isAdmin ? 'Admin Chatbot Assistant' : 'Teacher Chatbot Assistant'}
+              </h3>
               <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${isApiConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
                 <span className="text-sm text-gray-600">
@@ -262,61 +291,108 @@ export function Chatbot() {
         </div>
       </div>
 
-      {/* AI Configuration */}
-      <div className="card">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-          <Settings className="w-5 h-5" />
-          <span>AI Configuration</span>
-        </h4>
-        
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="apiKey">OpenAI API Key</Label>
-            <Input
-              id="apiKey"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-              className="mb-2"
-              data-testid="input-api-key"
-            />
-            <p className="text-xs text-gray-500">
-              Your API key is stored locally and never transmitted to our servers
-            </p>
-          </div>
+      {/* AI Configuration - Admin Only */}
+      {isAdmin && (
+        <div className="card">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+            <Settings className="w-5 h-5" />
+            <span>AI Configuration</span>
+          </h4>
           
-          <div className="flex items-center space-x-3">
-            <Button
-              onClick={handleSaveApiKey}
-              className="btn-primary"
-              data-testid="button-save-api-key"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Save API Key
-            </Button>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="apiKey">OpenAI API Key</Label>
+              <Input
+                id="apiKey"
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-..."
+                className="mb-2"
+                data-testid="input-api-key"
+              />
+              <p className="text-xs text-gray-500">
+                Your API key is stored locally and never transmitted to our servers
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={handleSaveApiKey}
+                className="btn-primary"
+                data-testid="button-save-api-key"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Save API Key
+              </Button>
+              
+              <Button
+                onClick={handleTestConnection}
+                variant="outline"
+                data-testid="button-test-ai-connection"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Test Connection
+              </Button>
+            </div>
+
+            {!apiKey && (
+              <div className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-yellow-600" />
+                <div className="text-sm text-yellow-800">
+                  <strong>Note:</strong> Without an API key, the chatbot will use rule-based responses. 
+                  For advanced AI capabilities, please configure your OpenAI API key.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Teacher-to-Admin Messaging - Teacher Only */}
+      {!isAdmin && (
+        <div className="card">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+            <Mail className="w-5 h-5" />
+            <span>Message Admin</span>
+          </h4>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="messageSubject">Subject</Label>
+              <Input
+                id="messageSubject"
+                value={adminMessageSubject}
+                onChange={(e) => setAdminMessageSubject(e.target.value)}
+                placeholder="Enter message subject"
+                data-testid="input-admin-message-subject"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="adminMessage">Message</Label>
+              <Textarea
+                id="adminMessage"
+                value={adminMessage}
+                onChange={(e) => setAdminMessage(e.target.value)}
+                placeholder="Write your message to the admin..."
+                rows={4}
+                data-testid="textarea-admin-message"
+              />
+            </div>
             
             <Button
-              onClick={handleTestConnection}
-              variant="outline"
-              data-testid="button-test-ai-connection"
+              onClick={handleSendAdminMessage}
+              className="btn-primary"
+              disabled={!adminMessage.trim() || !adminMessageSubject.trim()}
+              data-testid="button-send-admin-message"
             >
-              <Zap className="w-4 h-4 mr-2" />
-              Test Connection
+              <Mail className="w-4 h-4 mr-2" />
+              Send Message to Admin
             </Button>
           </div>
-
-          {!apiKey && (
-            <div className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-yellow-600" />
-              <div className="text-sm text-yellow-800">
-                <strong>Note:</strong> Without an API key, the chatbot will use rule-based responses. 
-                For advanced AI capabilities, please configure your OpenAI API key.
-              </div>
-            </div>
-          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

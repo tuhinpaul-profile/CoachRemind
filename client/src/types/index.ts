@@ -108,3 +108,14 @@ export interface ChartData {
     borderWidth?: number;
   }[];
 }
+
+export interface PendingApproval {
+  id: number;
+  type: 'attendance' | 'student_add' | 'student_edit' | 'student_delete';
+  teacherName: string;
+  teacherId: number;
+  timestamp: string;
+  status: 'pending' | 'approved' | 'rejected';
+  data: any; // The actual data to be approved (attendance record, student data, etc.)
+  description: string;
+}

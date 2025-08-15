@@ -8,9 +8,12 @@ import {
   Bell,
   MessageSquare,
   Settings,
-  GraduationCap
+  GraduationCap,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 
 const navigationItems = [
   { path: "/", label: "Dashboard Overview", icon: LayoutDashboard, roles: ["admin", "teacher"] },
@@ -26,22 +29,42 @@ const navigationItems = [
 export function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const allowedItems = navigationItems.filter(item => 
     item.roles.includes(user?.role || "teacher")
   );
 
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
   return (
-    <div className="w-64 bg-sidebar shadow-lg border-r border-sidebar-border sidebar-transition">
+    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-sidebar shadow-lg border-r border-sidebar-border sidebar-transition transition-all duration-300`}>
       <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-            <GraduationCap className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between">
+          <div className={`flex items-center space-x-3 ${isCollapsed ? 'justify-center' : ''}`}>
+            <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
+              <GraduationCap className="w-6 h-6 text-white" />
+            </div>
+            {!isCollapsed && (
+              <div>
+                <h1 className="text-lg font-semibold text-sidebar-foreground">Excellence Coaching</h1>
+                <p className="text-sm text-muted-foreground">Student Management System</p>
+              </div>
+            )}
           </div>
-          <div>
-            <h1 className="text-lg font-semibold text-sidebar-foreground">Excellence Coaching</h1>
-            <p className="text-sm text-muted-foreground">Student Management System</p>
-          </div>
+          <button
+            onClick={toggleSidebar}
+            className="p-1 hover:bg-muted/50 rounded-lg transition-colors"
+            data-testid="sidebar-toggle"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            )}
+          </button>
         </div>
       </div>
       
@@ -55,11 +78,12 @@ export function Sidebar() {
               <li key={item.path}>
                 <Link href={item.path}>
                   <span 
-                    className={`nav-link ${isActive ? 'active' : ''}`}
+                    className={`nav-link ${isActive ? 'active' : ''} ${isCollapsed ? 'justify-center' : ''}`}
                     data-testid={`nav-${item.path.replace('/', '') || 'dashboard'}`}
+                    title={isCollapsed ? item.label : undefined}
                   >
-                    <Icon className="w-5 h-5 mr-3" />
-                    {item.label}
+                    <Icon className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'}`} />
+                    {!isCollapsed && item.label}
                   </span>
                 </Link>
               </li>

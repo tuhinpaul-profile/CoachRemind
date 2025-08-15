@@ -22,6 +22,7 @@ interface Settings {
 
 export function Settings() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [settings, setSettings] = useState<Settings>({
     centerName: 'Excellence Coaching Center',
     centerEmail: 'admin@excellencecoaching.com',
@@ -214,9 +215,28 @@ export function Settings() {
                 placeholder="Enter your email"
               />
             </div>
-            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-              <p><strong>Role:</strong> {user?.role?.charAt(0).toUpperCase()}{user?.role?.slice(1)}</p>
-              <p><strong>Last Login:</strong> {user?.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</p>
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <p><strong>Role:</strong> {user?.role?.charAt(0).toUpperCase()}{user?.role?.slice(1)}</p>
+                <p><strong>Last Login:</strong> {user?.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</p>
+              </div>
+              
+              {/* Profile Image Section */}
+              <div className="space-y-2">
+                <Label>Profile Picture</Label>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-violet-500 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-xl">{user?.name.charAt(0)}</span>
+                  </div>
+                  <div className="space-y-2">
+                    <Button variant="outline" className="text-sm">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Change Photo
+                    </Button>
+                    <p className="text-xs text-muted-foreground">Upload a new avatar. JPG, PNG or GIF. Max size 2MB.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -262,197 +282,203 @@ export function Settings() {
         </div>
       </div>
 
-      {/* General Settings */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">General Settings</h3>
-          {hasChanges && (
-            <Button
-              onClick={handleSaveSettings}
-              className="btn-primary flex items-center space-x-2"
-              data-testid="button-save-settings"
-            >
-              <Save className="w-4 h-4" />
-              <span>Save Changes</span>
-            </Button>
-          )}
-        </div>
-        
-        <div className="space-y-6">
-          <div>
-            <Label htmlFor="centerName">Coaching Center Name</Label>
-            <Input
-              id="centerName"
-              value={settings.centerName}
-              onChange={(e) => handleInputChange('centerName', e.target.value)}
-              data-testid="input-center-name"
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="centerEmail">Contact Email</Label>
-              <Input
-                id="centerEmail"
-                type="email"
-                value={settings.centerEmail}
-                onChange={(e) => handleInputChange('centerEmail', e.target.value)}
-                data-testid="input-center-email"
-              />
-            </div>
-            <div>
-              <Label htmlFor="centerPhone">Contact Phone</Label>
-              <Input
-                id="centerPhone"
-                type="tel"
-                value={settings.centerPhone}
-                onChange={(e) => handleInputChange('centerPhone', e.target.value)}
-                data-testid="input-center-phone"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="centerAddress">Address</Label>
-            <Textarea
-              id="centerAddress"
-              value={settings.centerAddress}
-              onChange={(e) => handleInputChange('centerAddress', e.target.value)}
-              rows={3}
-              data-testid="input-center-address"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Fee Settings */}
-      <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Fee Settings</h3>
-        
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="defaultFee">Default Monthly Fee (₹)</Label>
-              <Input
-                id="defaultFee"
-                type="number"
-                value={settings.defaultFee}
-                onChange={(e) => handleInputChange('defaultFee', parseInt(e.target.value))}
-                data-testid="input-default-fee"
-              />
-            </div>
-            <div>
-              <Label htmlFor="lateFee">Late Fee Penalty (₹)</Label>
-              <Input
-                id="lateFee"
-                type="number"
-                value={settings.lateFee}
-                onChange={(e) => handleInputChange('lateFee', parseInt(e.target.value))}
-                data-testid="input-late-fee"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="gracePeriod">Grace Period (Days)</Label>
-              <Input
-                id="gracePeriod"
-                type="number"
-                value={settings.gracePeriod}
-                onChange={(e) => handleInputChange('gracePeriod', parseInt(e.target.value))}
-                data-testid="input-grace-period"
-              />
-            </div>
-            <div>
-              <Label htmlFor="feeDueDate">Fee Due Date</Label>
-              <Select
-                value={settings.feeDueDate.toString()}
-                onValueChange={(value) => handleInputChange('feeDueDate', parseInt(value))}
+      {/* General Settings - Admin Only */}
+      {isAdmin && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">General Settings</h3>
+            {hasChanges && (
+              <Button
+                onClick={handleSaveSettings}
+                className="btn-primary flex items-center space-x-2"
+                data-testid="button-save-settings"
               >
-                <SelectTrigger data-testid="select-fee-due-date">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1st of every month</SelectItem>
-                  <SelectItem value="5">5th of every month</SelectItem>
-                  <SelectItem value="10">10th of every month</SelectItem>
-                  <SelectItem value="15">15th of every month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Data Management */}
-      <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Data Management</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h4 className="text-md font-medium text-gray-900">Backup & Export</h4>
-            <Button
-              onClick={handleBackupData}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2"
-              data-testid="button-backup-data"
-            >
-              <Download className="w-5 h-5" />
-              <span>Export All Data</span>
-            </Button>
-            
-            <Button
-              onClick={handleExportStudents}
-              className="w-full btn-success flex items-center justify-center space-x-2"
-              data-testid="button-export-students"
-            >
-              <Download className="w-5 h-5" />
-              <span>Export Students</span>
-            </Button>
+                <Save className="w-4 h-4" />
+                <span>Save Changes</span>
+              </Button>
+            )}
           </div>
           
-          <div className="space-y-4">
-            <h4 className="text-md font-medium text-gray-900">Import & Restore</h4>
-            <div className="space-y-2">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImportData}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
-                data-testid="input-import-file"
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="centerName">Coaching Center Name</Label>
+              <Input
+                id="centerName"
+                value={settings.centerName}
+                onChange={(e) => handleInputChange('centerName', e.target.value)}
+                data-testid="input-center-name"
               />
-              <p className="text-xs text-gray-500">Select a JSON backup file to restore data</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="centerEmail">Contact Email</Label>
+                <Input
+                  id="centerEmail"
+                  type="email"
+                  value={settings.centerEmail}
+                  onChange={(e) => handleInputChange('centerEmail', e.target.value)}
+                  data-testid="input-center-email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="centerPhone">Contact Phone</Label>
+                <Input
+                  id="centerPhone"
+                  type="tel"
+                  value={settings.centerPhone}
+                  onChange={(e) => handleInputChange('centerPhone', e.target.value)}
+                  data-testid="input-center-phone"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="centerAddress">Address</Label>
+              <Textarea
+                id="centerAddress"
+                value={settings.centerAddress}
+                onChange={(e) => handleInputChange('centerAddress', e.target.value)}
+                rows={3}
+                data-testid="input-center-address"
+              />
             </div>
           </div>
         </div>
-        
-        {/* Danger Zone */}
-        <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h4 className="text-md font-medium text-red-900 mb-2 flex items-center space-x-2">
-            <AlertTriangle className="w-5 h-5" />
-            <span>Danger Zone</span>
-          </h4>
-          <p className="text-sm text-red-700 mb-4">These actions cannot be undone. Please be careful.</p>
-          <div className="space-y-2">
-            <Button
-              onClick={handleClearAllAttendance}
-              className="btn-danger mr-3"
-              data-testid="button-clear-attendance"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Clear All Attendance
-            </Button>
-            <Button
-              onClick={handleResetAllData}
-              className="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded-lg transition-colors"
-              data-testid="button-reset-all-data"
-            >
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Reset All Data
-            </Button>
+      )}
+
+      {/* Fee Settings - Admin Only */}
+      {isAdmin && (
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Fee Settings</h3>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="defaultFee">Default Monthly Fee (₹)</Label>
+                <Input
+                  id="defaultFee"
+                  type="number"
+                  value={settings.defaultFee}
+                  onChange={(e) => handleInputChange('defaultFee', parseInt(e.target.value))}
+                  data-testid="input-default-fee"
+                />
+              </div>
+              <div>
+                <Label htmlFor="lateFee">Late Fee Penalty (₹)</Label>
+                <Input
+                  id="lateFee"
+                  type="number"
+                  value={settings.lateFee}
+                  onChange={(e) => handleInputChange('lateFee', parseInt(e.target.value))}
+                  data-testid="input-late-fee"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="gracePeriod">Grace Period (Days)</Label>
+                <Input
+                  id="gracePeriod"
+                  type="number"
+                  value={settings.gracePeriod}
+                  onChange={(e) => handleInputChange('gracePeriod', parseInt(e.target.value))}
+                  data-testid="input-grace-period"
+                />
+              </div>
+              <div>
+                <Label htmlFor="feeDueDate">Fee Due Date</Label>
+                <Select
+                  value={settings.feeDueDate.toString()}
+                  onValueChange={(value) => handleInputChange('feeDueDate', parseInt(value))}
+                >
+                  <SelectTrigger data-testid="select-fee-due-date">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1st of every month</SelectItem>
+                    <SelectItem value="5">5th of every month</SelectItem>
+                    <SelectItem value="10">10th of every month</SelectItem>
+                    <SelectItem value="15">15th of every month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Data Management - Admin Only */}
+      {isAdmin && (
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Data Management</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h4 className="text-md font-medium text-gray-900">Backup & Export</h4>
+              <Button
+                onClick={handleBackupData}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                data-testid="button-backup-data"
+              >
+                <Download className="w-5 h-5" />
+                <span>Export All Data</span>
+              </Button>
+              
+              <Button
+                onClick={handleExportStudents}
+                className="w-full btn-success flex items-center justify-center space-x-2"
+                data-testid="button-export-students"
+              >
+                <Download className="w-5 h-5" />
+                <span>Export Students</span>
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <h4 className="text-md font-medium text-gray-900">Import & Restore</h4>
+              <div className="space-y-2">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportData}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                  data-testid="input-import-file"
+                />
+                <p className="text-xs text-gray-500">Select a JSON backup file to restore data</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Danger Zone */}
+          <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h4 className="text-md font-medium text-red-900 mb-2 flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span>Danger Zone</span>
+            </h4>
+            <p className="text-sm text-red-700 mb-4">These actions cannot be undone. Please be careful.</p>
+            <div className="space-y-2">
+              <Button
+                onClick={handleClearAllAttendance}
+                className="btn-danger mr-3"
+                data-testid="button-clear-attendance"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Clear All Attendance
+              </Button>
+              <Button
+                onClick={handleResetAllData}
+                className="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded-lg transition-colors"
+                data-testid="button-reset-all-data"
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Reset All Data
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* System Information */}
       <div className="card">
