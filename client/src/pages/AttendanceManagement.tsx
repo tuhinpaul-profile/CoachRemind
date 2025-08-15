@@ -209,13 +209,13 @@ export function AttendanceManagement() {
               className="w-auto"
               data-testid="input-attendance-date"
             />
-            <Button onClick={markAllPresent} className="btn-success" data-testid="button-mark-all-present">
+            <Button onClick={markAllPresent} className="bg-green-600 hover:bg-green-700 text-white" data-testid="button-mark-all-present">
               Mark All Present
             </Button>
-            <Button onClick={markAllAbsent} className="btn-danger" data-testid="button-mark-all-absent">
+            <Button onClick={markAllAbsent} className="bg-red-600 hover:bg-red-700 text-white" data-testid="button-mark-all-absent">
               Mark All Absent
             </Button>
-            <Button onClick={saveAttendance} className="btn-primary" data-testid="button-save-attendance">
+            <Button onClick={saveAttendance} variant="default" data-testid="button-save-attendance">
               Save Attendance
             </Button>
           </div>
@@ -296,7 +296,9 @@ export function AttendanceManagement() {
                 <div className="flex items-center space-x-2">
                   <Button
                     onClick={() => markAttendance(student.id, 'present')}
-                    className={`px-3 py-1 ${status === 'present' ? 'btn-success' : 'btn-secondary'} text-sm`}
+                    variant={status === 'present' ? 'default' : 'outline'}
+                    size="sm"
+                    className={`${status === 'present' ? 'bg-green-600 hover:bg-green-700 text-white' : 'border-green-600 text-green-600 hover:bg-green-50'}`}
                     data-testid={`button-present-${student.id}`}
                   >
                     <Check className="w-4 h-4 mr-1" />
@@ -304,7 +306,9 @@ export function AttendanceManagement() {
                   </Button>
                   <Button
                     onClick={() => markAttendance(student.id, 'absent')}
-                    className={`px-3 py-1 ${status === 'absent' ? 'btn-danger' : 'btn-secondary'} text-sm`}
+                    variant={status === 'absent' ? 'default' : 'outline'}
+                    size="sm"
+                    className={`${status === 'absent' ? 'bg-red-600 hover:bg-red-700 text-white' : 'border-red-600 text-red-600 hover:bg-red-50'}`}
                     data-testid={`button-absent-${student.id}`}
                   >
                     <X className="w-4 h-4 mr-1" />
