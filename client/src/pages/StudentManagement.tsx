@@ -947,14 +947,12 @@ export function StudentManagement() {
                     <span>Contact Info</span>
                   </div>
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Attendance
+                </th>
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Fee Status
-                  </th>
-                )}
-                {!isAdmin && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Attendance
                   </th>
                 )}
                 <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1049,34 +1047,7 @@ export function StudentManagement() {
                             </span>
                           </div>
                         )}
-                        {isAdmin && (
-                          <div className="flex items-center space-x-2">
-                            <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                              attendanceInfo.attendanceRate >= 80 ? 'bg-green-100 text-green-800' :
-                              attendanceInfo.attendanceRate >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {attendanceInfo.attendanceRate}%
-                            </span>
-                            {attendanceInfo.lastStatus && (
-                              <span className={`text-xs ${
-                                attendanceInfo.lastStatus === 'present' ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                Last: {attendanceInfo.lastStatus}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {isAdmin && attendanceInfo.totalDays > 0 && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {attendanceInfo.presentDays}/{attendanceInfo.totalDays} days
-                            {attendanceInfo.daysSincePresent > 7 && (
-                              <span className="text-orange-600 ml-2">
-                                • {attendanceInfo.daysSincePresent}d ago
-                              </span>
-                            )}
-                          </div>
-                        )}
+
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1093,43 +1064,41 @@ export function StudentManagement() {
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm">
+                        <div className="flex items-center space-x-2">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            attendanceInfo.attendanceRate >= 80 ? 'bg-green-100 text-green-800' :
+                            attendanceInfo.attendanceRate >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {attendanceInfo.attendanceRate}%
+                          </span>
+                          {attendanceInfo.lastStatus && (
+                            <span className={`text-xs ${
+                              attendanceInfo.lastStatus === 'present' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              Last: {attendanceInfo.lastStatus}
+                            </span>
+                          )}
+                        </div>
+                        {attendanceInfo.totalDays > 0 && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {attendanceInfo.presentDays}/{attendanceInfo.totalDays} days
+                            {attendanceInfo.daysSincePresent > 7 && (
+                              <span className="text-orange-600 ml-2">
+                                • {attendanceInfo.daysSincePresent}d ago
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full fee-status-${feeStatus.status}`}>
                           {feeStatus.status.charAt(0).toUpperCase() + feeStatus.status.slice(1)}
                         </span>
-                      </td>
-                    )}
-                    {!isAdmin && (
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm">
-                          <div className="flex items-center space-x-2">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              attendanceInfo.attendanceRate >= 80 ? 'bg-green-100 text-green-800' :
-                              attendanceInfo.attendanceRate >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {attendanceInfo.attendanceRate}%
-                            </span>
-                            {attendanceInfo.lastStatus && (
-                              <span className={`text-xs ${
-                                attendanceInfo.lastStatus === 'present' ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                Last: {attendanceInfo.lastStatus}
-                              </span>
-                            )}
-                          </div>
-                          {attendanceInfo.totalDays > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {attendanceInfo.presentDays}/{attendanceInfo.totalDays} days
-                              {attendanceInfo.daysSincePresent > 7 && (
-                                <span className="text-orange-600 ml-2">
-                                  • {attendanceInfo.daysSincePresent}d ago
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
