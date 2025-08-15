@@ -1,10 +1,12 @@
-import { Bell, Sun, Moon, LogOut, User } from "lucide-react";
+import { Sun, Moon, LogOut, User } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { NotificationBell } from "../NotificationBell";
+import { addSampleNotifications } from "@/lib/sampleNotifications";
 
 interface HeaderProps {
   title: string;
@@ -17,6 +19,9 @@ export function Header({ title, subtitle }: HeaderProps) {
   const { user, logout } = useAuth();
 
   useEffect(() => {
+    // Add sample notifications on first load
+    addSampleNotifications();
+    
     const updateNotificationCount = () => {
       const notifications = StorageService.getNotifications();
       const unreadCount = notifications.filter(n => !n.read).length;
@@ -56,22 +61,7 @@ export function Header({ title, subtitle }: HeaderProps) {
               <Sun className="h-4 w-4" />
             )}
           </Button>
-          <div className="relative">
-            <button 
-              className="p-2 text-muted-foreground hover:text-foreground relative"
-              data-testid="notification-button"
-            >
-              <Bell className="w-6 h-6" />
-              {notificationCount > 0 && (
-                <span 
-                  className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
-                  data-testid="notification-badge"
-                >
-                  {notificationCount}
-                </span>
-              )}
-            </button>
-          </div>
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 transition-colors">
