@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddStudentModal } from "@/components/Modals/AddStudentModal";
 import { StudentDetailsModal } from "@/components/Modals/StudentDetailsModal";
+import { AdminStudentModal } from "@/components/Modals/AdminStudentModal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +25,9 @@ export function StudentManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<Student | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedStudentForAdmin, setSelectedStudentForAdmin] = useState<Student | null>(null);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [adminModalMode, setAdminModalMode] = useState<'add' | 'edit' | 'view'>('view');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedStudents, setSelectedStudents] = useState<Set<number>>(new Set());
@@ -245,6 +249,81 @@ export function StudentManagement() {
 
       toast.success(`Status change submitted for admin approval: ${student.name} to be marked as ${newStatus}`);
     }
+  };
+
+  // Admin handlers for comprehensive student management
+  const openAdminAddModal = () => {
+    setSelectedStudentForAdmin(null);
+    setAdminModalMode('add');
+    setIsAdminModalOpen(true);
+  };
+
+  const openAdminEditModal = (student: Student) => {
+    setSelectedStudentForAdmin(student);
+    setAdminModalMode('edit');
+    setIsAdminModalOpen(true);
+  };
+
+  const openAdminViewModal = (student: Student) => {
+    setSelectedStudentForAdmin(student);
+    setAdminModalMode('view');
+    setIsAdminModalOpen(true);
+  };
+
+  const handleAdminSaveStudent = (studentData: Student) => {
+    if (adminModalMode === 'add') {
+      // Adding new student with comprehensive data
+      const newId = Math.max(...students.map(s => s.id), 0) + 1;
+      const newStudent: Student = {
+        ...studentData,
+        id: newId
+      };
+
+      const updatedStudents = [...students, newStudent];
+      setStudents(updatedStudents);
+      StorageService.setStudents(updatedStudents);
+
+      // Create initial fee record
+      const newFee: Fee = {
+        id: Math.max(...fees.map(f => f.id), 0) + 1,
+        studentId: newId,
+        amount: studentData.monthlyFee,
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        description: 'Monthly Fee - ' + new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        status: 'pending'
+      };
+
+      const updatedFees = [...fees, newFee];
+      setFees(updatedFees);
+      StorageService.setFees(updatedFees);
+
+      toast.success('Student added successfully with comprehensive details');
+      StorageService.addNotification({
+        type: 'info',
+        message: `New student ${newStudent.name} enrolled with detailed profile`,
+        read: false,
+        studentId: newId
+      });
+    } else if (adminModalMode === 'edit') {
+      // Editing existing student with comprehensive data
+      const updatedStudents = students.map(s => 
+        s.id === studentData.id ? studentData : s
+      );
+      
+      setStudents(updatedStudents);
+      StorageService.setStudents(updatedStudents);
+      
+      toast.success('Student profile updated successfully');
+      StorageService.addNotification({
+        type: 'info',
+        message: `Student ${studentData.name} profile updated`,
+        read: false,
+        studentId: studentData.id
+      });
+    }
+    
+    setIsAdminModalOpen(false);
+    setSelectedStudentForAdmin(null);
   };
 
   const exportStudents = async (format: 'pdf' | 'excel' | 'html' = 'excel') => {
@@ -776,14 +855,24 @@ export function StudentManagement() {
               )}
             </div>
             {isAdmin && (
-              <Button
-                onClick={() => setIsAddModalOpen(true)}
-                className="btn-primary flex items-center space-x-2"
-                data-testid="button-add-student"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Student</span>
-              </Button>
+              <>
+                <Button
+                  onClick={openAdminAddModal}
+                  className="btn-primary flex items-center space-x-2"
+                  data-testid="button-admin-add-student"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Student</span>
+                </Button>
+                <Button
+                  onClick={() => toast.info('Admin Dashboard with full control features coming soon!')}
+                  variant="outline"
+                  className="flex items-center space-x-2 border-violet-200 text-violet-700 hover:bg-violet-50"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Admin Dashboard</span>
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -1063,10 +1152,10 @@ export function StudentManagement() {
                         {isAdmin && (
                           <>
                             <button
-                              onClick={() => toast.info('Edit functionality coming soon')}
+                              onClick={() => openAdminEditModal(student)}
                               className="inline-flex items-center justify-center w-9 h-9 text-violet-600 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors shadow-sm"
                               data-testid={`button-edit-${student.id}`}
-                              title="Edit student information"
+                              title="Edit comprehensive student information"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
@@ -1129,6 +1218,18 @@ export function StudentManagement() {
           }}
         />
       )}
+
+      {/* Admin Student Management Modal - Comprehensive student data management */}
+      <AdminStudentModal
+        student={selectedStudentForAdmin}
+        isOpen={isAdminModalOpen}
+        onClose={() => {
+          setIsAdminModalOpen(false);
+          setSelectedStudentForAdmin(null);
+        }}
+        onSave={handleAdminSaveStudent}
+        mode={adminModalMode}
+      />
     </div>
   );
 }

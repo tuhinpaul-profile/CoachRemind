@@ -11,6 +11,35 @@ export interface Student {
   status: 'active' | 'inactive';
   enrollmentDate: string;
   profileImage?: string;
+  address?: string;
+  emergencyContact?: string;
+  bloodGroup?: string;
+  achievements?: string[];
+  subjectPerformance?: SubjectPerformance[];
+  strongSubjects?: string[];
+  improvementAreas?: string[];
+  lastParentMeeting?: ParentTeacherMeeting;
+  parentMeetings?: ParentTeacherMeeting[];
+  notes?: string;
+}
+
+export interface SubjectPerformance {
+  subject: string;
+  score: number;
+  grade: string;
+  trend: 'up' | 'down' | 'stable';
+  lastUpdated: string;
+}
+
+export interface ParentTeacherMeeting {
+  id: string;
+  date: string;
+  attendees: string[];
+  topics: string[];
+  remarks: string;
+  actionItems: string[];
+  nextMeetingDate?: string;
+  createdBy: string;
 }
 
 export interface AttendanceRecord {
