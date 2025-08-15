@@ -6,6 +6,8 @@ interface User {
   name: string;
   role: 'admin' | 'teacher';
   lastLogin?: string;
+  profileImage?: string;
+  password?: string;
 }
 
 interface AuthContextType {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Save, Upload, Download, AlertTriangle, RotateCcw, User, Lock } from "lucide-react";
 import { StorageService } from "@/lib/storage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,7 +40,10 @@ export function Settings() {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+    profileImage: user?.profileImage || '',
   });
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -160,6 +163,37 @@ export function Settings() {
     }, 1000);
   };
 
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size must be less than 2MB');
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (JPG, PNG, or GIF)');
+      return;
+    }
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setSelectedImage(result);
+      setProfileData(prev => ({ ...prev, profileImage: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleChangePhoto = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleProfileUpdate = () => {
     if (profileData.newPassword && profileData.newPassword !== profileData.confirmPassword) {
       toast.error('New passwords do not match');
@@ -170,10 +204,57 @@ export function Settings() {
       toast.error('Password must be at least 6 characters long');
       return;
     }
+
+    if (!profileData.name.trim()) {
+      toast.error('Full name is required');
+      return;
+    }
+
+    if (!profileData.email.trim()) {
+      toast.error('Email address is required');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(profileData.email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
     
-    // In a real app, this would make an API call
-    toast.success('Profile updated successfully');
-    setProfileData(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+    try {
+      // Update user data in storage
+      const currentUser = StorageService.getCurrentUser();
+      if (currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          name: profileData.name,
+          email: profileData.email,
+          profileImage: profileData.profileImage,
+        };
+        
+        // Update password if provided
+        if (profileData.newPassword) {
+          updatedUser.password = profileData.newPassword; // In real app, this would be hashed
+        }
+        
+        StorageService.updateUser(updatedUser);
+        
+        // Update auth context
+        window.location.reload(); // Simple way to refresh user data
+      }
+      
+      toast.success('Profile updated successfully');
+      setProfileData(prev => ({ 
+        ...prev, 
+        currentPassword: '', 
+        newPassword: '', 
+        confirmPassword: '' 
+      }));
+      setSelectedImage(null);
+    } catch (error) {
+      toast.error('Failed to update profile');
+    }
   };
 
   return (
@@ -225,15 +306,33 @@ export function Settings() {
               <div className="space-y-2">
                 <Label>Profile Picture</Label>
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-violet-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-xl">{user?.name.charAt(0)}</span>
+                  <div className="w-16 h-16 bg-violet-500 rounded-full flex items-center justify-center overflow-hidden">
+                    {selectedImage || profileData.profileImage ? (
+                      <img
+                        src={selectedImage || profileData.profileImage}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white font-bold text-xl">{profileData.name.charAt(0) || 'T'}</span>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Button variant="outline" className="text-sm">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <Button variant="outline" className="text-sm" onClick={handleChangePhoto}>
                       <Upload className="w-4 h-4 mr-2" />
                       Change Photo
                     </Button>
                     <p className="text-xs text-muted-foreground">Upload a new avatar. JPG, PNG or GIF. Max size 2MB.</p>
+                    {selectedImage && (
+                      <p className="text-xs text-green-600">New image selected - click Update Profile to save</p>
+                    )}
                   </div>
                 </div>
               </div>

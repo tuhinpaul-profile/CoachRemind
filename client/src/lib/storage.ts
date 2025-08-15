@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   EMAIL_CONFIG: 'coaching_email_config',
   SETTINGS: 'coaching_settings',
   PENDING_APPROVALS: 'coaching_pending_approvals',
+  CURRENT_USER: 'coaching-user',
 };
 
 export class StorageService {
@@ -203,5 +204,15 @@ export class StorageService {
     approval.status = 'rejected';
     this.setPendingApprovals(approvals);
     return true;
+  }
+
+  // User Management Methods
+  static getCurrentUser(): any {
+    const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    return data ? JSON.parse(data) : null;
+  }
+
+  static updateUser(user: any): void {
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
   }
 }
