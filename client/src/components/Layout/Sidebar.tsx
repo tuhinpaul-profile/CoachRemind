@@ -40,32 +40,41 @@ export function Sidebar() {
   };
 
   return (
-    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-sidebar shadow-lg border-r border-sidebar-border sidebar-transition transition-all duration-300`}>
-      <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center justify-between">
-          <div className={`flex items-center space-x-3 ${isCollapsed ? 'justify-center' : ''}`}>
+    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-sidebar shadow-lg border-r border-sidebar-border transition-all duration-300`}>
+      <div className={`${isCollapsed ? 'p-2' : 'p-6'} border-b border-sidebar-border`}>
+        {isCollapsed ? (
+          <div className="flex flex-col items-center space-y-3">
             <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            {!isCollapsed && (
+            <button
+              onClick={toggleSidebar}
+              className="p-1 hover:bg-muted/50 rounded-lg transition-colors"
+              data-testid="sidebar-toggle"
+            >
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
               <div>
                 <h1 className="text-lg font-semibold text-sidebar-foreground">Excellence Coaching</h1>
                 <p className="text-sm text-muted-foreground">Student Management System</p>
               </div>
-            )}
-          </div>
-          <button
-            onClick={toggleSidebar}
-            className="p-1 hover:bg-muted/50 rounded-lg transition-colors"
-            data-testid="sidebar-toggle"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            ) : (
+            </div>
+            <button
+              onClick={toggleSidebar}
+              className="p-1 hover:bg-muted/50 rounded-lg transition-colors"
+              data-testid="sidebar-toggle"
+            >
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-            )}
-          </button>
-        </div>
+            </button>
+          </div>
+        )}
       </div>
       
       <nav className="mt-6 px-4">
