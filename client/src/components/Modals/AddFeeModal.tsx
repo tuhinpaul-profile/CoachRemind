@@ -77,8 +77,23 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students, prefillData }: A
           selectedMonths: new Set([selectedMonth])
         }));
       }
+    } else {
+      // Reset form when modal opens without prefill data
+      setSelectedStudent(null);
+      setSearchData({
+        academicYear: '2024-2025',
+        classSection: '',
+        selectedStudent: null,
+        rollNumber: ''
+      });
+      setPaymentData({
+        paymentType: '',
+        referenceNo: '',
+        remarks: '',
+        selectedMonths: new Set()
+      });
     }
-  }, [prefillData]);
+  }, [prefillData, isOpen]);
 
   useEffect(() => {
     if (selectedStudent) {
@@ -225,7 +240,7 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students, prefillData }: A
             </div>
 
             <div>
-              <Label htmlFor="classSection">Class Section</Label>
+              <Label htmlFor="classSection">Grade</Label>
               <Select value={searchData.classSection} onValueChange={(value) => handleSearchDataChange('classSection', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Class Section" />
