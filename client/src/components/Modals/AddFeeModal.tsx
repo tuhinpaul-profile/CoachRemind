@@ -9,14 +9,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Student, Fee } from "@/types";
 
+interface PrefillData {
+  student?: Student;
+  fee?: Fee;
+  lateFee?: number;
+}
+
 interface AddFeeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (fee: Omit<Fee, 'id'>) => void;
   students: Student[];
+  prefillData?: PrefillData;
 }
 
-export function AddFeeModal({ isOpen, onClose, onAdd, students }: AddFeeModalProps) {
+export function AddFeeModal({ isOpen, onClose, onAdd, students, prefillData }: AddFeeModalProps) {
   const [searchData, setSearchData] = useState({
     academicYear: '2024-2025',
     classSection: '',
@@ -49,6 +56,31 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students }: AddFeeModalPro
   const paymentTypes = ['Cash', 'Online', 'Bank Transfer', 'Cheque', 'UPI'];
 
   useEffect(() => {
+    // Handle prefilled data when modal opens for fee collection
+    if (prefillData?.student && prefillData?.fee) {
+      setSelectedStudent(prefillData.student);
+      const classSection = prefillData.student.grade;
+      setSearchData({
+        academicYear: '2024-2025',
+        classSection: classSection,
+        selectedStudent: prefillData.student,
+        rollNumber: prefillData.student.rollNumber
+      });
+      
+      // Set the specific month as selected for payment
+      const feeDescription = prefillData.fee.description;
+      const monthMatch = feeDescription.match(/(January|February|March|April|May|June|July|August|September|October|November|December)/i);
+      if (monthMatch) {
+        const selectedMonth = monthMatch[1];
+        setPaymentData(prev => ({
+          ...prev,
+          selectedMonths: new Set([selectedMonth])
+        }));
+      }
+    }
+  }, [prefillData]);
+
+  useEffect(() => {
     if (selectedStudent) {
       // Generate monthly fee data for the selected student
       const fees = months.map((month, index) => ({
@@ -58,8 +90,23 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students }: AddFeeModalPro
         dueDate: `2024-${String(index + 4 > 12 ? index - 8 : index + 4).padStart(2, '0')}-05`
       }));
       setMonthlyFees(fees);
+      
+      // If this is a prefilled fee, mark the specific month as due
+      if (prefillData?.fee) {
+        const feeDescription = prefillData.fee.description;
+        const monthMatch = feeDescription.match(/(January|February|March|April|May|June|July|August|September|October|November|December)/i);
+        if (monthMatch) {
+          const selectedMonth = monthMatch[1];
+          const updatedFees = fees.map(fee => 
+            fee.month === selectedMonth 
+              ? { ...fee, status: 'due', amount: prefillData.fee!.amount }
+              : fee
+          );
+          setMonthlyFees(updatedFees);
+        }
+      }
     }
-  }, [selectedStudent]);
+  }, [selectedStudent, prefillData]);
 
   const handleSearch = () => {
     if (searchData.classSection) {
@@ -291,10 +338,30 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students }: AddFeeModalPro
                   ))}
                 </div>
 
+                {/* Late Fee Section */}
+                {prefillData?.lateFee && prefillData.lateFee > 0 && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <div className="text-sm font-medium text-red-700 dark:text-red-300 mb-2">Late Fee Calculation</div>
+                    <div className="text-sm text-red-600 dark:text-red-400 mb-2">
+                      This fee is overdue. Additional late fee applies:
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-red-600 dark:text-red-400">Late Fee:</span>
+                      <span className="font-semibold text-red-700 dark:text-red-300">₹{prefillData.lateFee.toLocaleString()}</span>
+                    </div>
+                    <div className="text-xs text-red-500 dark:text-red-400 mt-1">
+                      * ₹10/day for first 30 days, then ₹20/day
+                    </div>
+                  </div>
+                )}
+
                 {/* Grand Total */}
                 <div className="bg-blue-600 text-white p-4 rounded-lg text-center">
                   <div className="text-sm font-medium">GRAND TOTAL</div>
-                  <div className="text-xl font-bold">₹{getTotalAmount().toFixed(2)}</div>
+                  <div className="text-xl font-bold">₹{(getTotalAmount() + (prefillData?.lateFee || 0)).toFixed(2)}</div>
+                  {prefillData?.lateFee && prefillData.lateFee > 0 && (
+                    <div className="text-xs mt-1">Includes ₹{prefillData.lateFee.toLocaleString()} late fee</div>
+                  )}
                 </div>
 
                 {/* Payment Details */}

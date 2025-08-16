@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddFeeModal } from "@/components/Modals/AddFeeModal";
+import { PaymentSuccessModal } from "@/components/Modals/PaymentSuccessModal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useToast } from "@/hooks/useToast";
 
@@ -18,6 +19,9 @@ export function FeeManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedFeeForCollection, setSelectedFeeForCollection] = useState<Fee | null>(null);
+  const [isPaymentSuccessOpen, setIsPaymentSuccessOpen] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<{amount: number, lateFee: number, total: number, receiptId: string} | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [stats, setStats] = useState<FeeStats>({
@@ -141,13 +145,46 @@ export function FeeManagement() {
   };
 
   const handleCollectFee = (feeId: number) => {
+    const fee = fees.find(f => f.id === feeId);
+    if (fee) {
+      setSelectedFeeForCollection(fee);
+      setIsAddModalOpen(true);
+    }
+  };
+
+  const calculateLateFee = (dueDate: string): number => {
+    const due = new Date(dueDate);
+    const today = new Date();
+    const diffTime = today.getTime() - due.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 0) return 0;
+    
+    // Calculate late fee: ₹10 per day for first 30 days, then ₹20 per day
+    if (diffDays <= 30) {
+      return diffDays * 10;
+    } else {
+      return (30 * 10) + ((diffDays - 30) * 20);
+    }
+  };
+
+  const handleFeePaymentComplete = (feeData: any) => {
+    if (!selectedFeeForCollection) return;
+
+    const lateFee = calculateLateFee(selectedFeeForCollection.dueDate);
+    const totalAmount = selectedFeeForCollection.amount + lateFee;
+    const receiptId = `RCP-${Date.now()}-${selectedFeeForCollection.studentId}`;
+
+    // Update the fee status
     const updatedFees = fees.map(fee => {
-      if (fee.id === feeId) {
+      if (fee.id === selectedFeeForCollection.id) {
         return {
           ...fee,
           status: 'paid' as const,
           paidDate: new Date().toISOString().split('T')[0],
-          paidAmount: fee.amount
+          paidAmount: totalAmount,
+          lateFee: lateFee,
+          receiptId: receiptId
         };
       }
       return fee;
@@ -156,15 +193,24 @@ export function FeeManagement() {
     setFees(updatedFees);
     StorageService.setFees(updatedFees);
     
-    const fee = fees.find(f => f.id === feeId);
-    const student = students.find(s => s.id === fee?.studentId);
+    // Set payment result for success modal
+    setPaymentResult({
+      amount: selectedFeeForCollection.amount,
+      lateFee: lateFee,
+      total: totalAmount,
+      receiptId: receiptId
+    });
     
-    toast.success(`Fee collected from ${student?.name}`);
+    // Close fee modal and show success modal
+    setIsAddModalOpen(false);
+    setIsPaymentSuccessOpen(true);
+    
+    const student = students.find(s => s.id === selectedFeeForCollection.studentId);
     StorageService.addNotification({
       type: 'fee',
-      message: `Fee payment received from ${student?.name} - ₹${fee?.amount}`,
+      message: `Fee payment received from ${student?.name} - ₹${totalAmount.toLocaleString()}`,
       read: false,
-      studentId: fee?.studentId
+      studentId: selectedFeeForCollection.studentId
     });
   };
 
@@ -374,6 +420,17 @@ export function FeeManagement() {
 
             const isOverdue = fee.status === 'overdue';
             const daysOverdue = isOverdue ? getDaysOverdue(fee.dueDate) : 0;
+            const calculateLateFeeForDisplay = (dueDate: string): number => {
+              const due = new Date(dueDate);
+              const today = new Date();
+              const diffTime = today.getTime() - due.getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              
+              if (diffDays <= 0) return 0;
+              if (diffDays <= 30) return diffDays * 10;
+              return (30 * 10) + ((diffDays - 30) * 20);
+            };
+            const currentLateFee = isOverdue ? calculateLateFeeForDisplay(fee.dueDate) : 0;
 
             return (
               <div
@@ -400,12 +457,22 @@ export function FeeManagement() {
                   <div className="text-right">
                     <div className="font-semibold text-gray-900" data-testid={`fee-amount-${fee.id}`}>
                       ₹{fee.amount.toLocaleString()}
+                      {isOverdue && currentLateFee > 0 && (
+                        <div className="text-sm text-red-600 font-normal">
+                          + ₹{currentLateFee.toLocaleString()} late fee
+                        </div>
+                      )}
                     </div>
                     <div className={`text-sm capitalize ${
                       fee.status === 'paid' ? 'text-green-600' : 
                       fee.status === 'overdue' ? 'text-red-600' : 'text-orange-600'
                     }`}>
                       {fee.status}
+                      {isOverdue && (
+                        <div className="text-xs text-red-500">
+                          Total: ₹{(fee.amount + currentLateFee).toLocaleString()}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {fee.status !== 'paid' ? (
@@ -462,10 +529,28 @@ export function FeeManagement() {
 
       <AddFeeModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={handleAddFee}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setSelectedFeeForCollection(null);
+        }}
+        onAdd={selectedFeeForCollection ? handleFeePaymentComplete : handleAddFee}
         students={students}
+        prefillData={selectedFeeForCollection ? {
+          student: students.find(s => s.id === selectedFeeForCollection.studentId),
+          fee: selectedFeeForCollection,
+          lateFee: calculateLateFee(selectedFeeForCollection.dueDate)
+        } : undefined}
       />
+      
+      {/* Payment Success Modal */}
+      {isPaymentSuccessOpen && paymentResult && (
+        <PaymentSuccessModal
+          isOpen={isPaymentSuccessOpen}
+          onClose={() => setIsPaymentSuccessOpen(false)}
+          paymentResult={paymentResult}
+          student={students.find(s => s.id === selectedFeeForCollection?.studentId)}
+        />
+      )}
     </div>
   );
 }
