@@ -263,11 +263,7 @@ export function AttendanceManagement() {
 
   const submitAttendanceForApproval = () => {
     if (Object.keys(pendingAttendance).length === 0) {
-      toast({
-        title: "No Changes",
-        description: "Please mark attendance for students before submitting.",
-        variant: "destructive"
-      });
+      toast.error("Please mark attendance for students before submitting.");
       return;
     }
 
@@ -290,10 +286,7 @@ export function AttendanceManagement() {
     );
 
     if (submissions.length > 0) {
-      toast({
-        title: "Submitted Successfully",
-        description: `Attendance for ${submissions.length} students submitted for admin approval.`,
-      });
+      toast.success(`Attendance for ${submissions.length} students submitted for admin approval.`);
       
       // Clear pending attendance for this date
       const newPending = { ...pendingAttendance };
@@ -304,11 +297,7 @@ export function AttendanceManagement() {
       });
       setPendingAttendance(newPending);
     } else {
-      toast({
-        title: "Submission Failed",
-        description: "Failed to submit attendance for approval.",
-        variant: "destructive"
-      });
+      toast.error("Failed to submit attendance for approval.");
     }
   };
 
@@ -402,64 +391,42 @@ export function AttendanceManagement() {
   // Approval functions
   const handleApproveSelected = () => {
     if (selectedSubmissions.size === 0) {
-      toast({
-        title: "No Selection",
-        description: "Please select attendance records to approve.",
-        variant: "destructive"
-      });
+      toast.error("Please select attendance records to approve.");
       return;
     }
 
     const success = StorageService.approveAttendanceSubmissions(
       Array.from(selectedSubmissions),
-      user?.id || 'admin'
+      String(user?.id || 'admin')
     );
 
     if (success) {
-      toast({
-        title: "Approved Successfully",
-        description: `${selectedSubmissions.size} attendance records have been approved.`,
-      });
+      toast.success(`${selectedSubmissions.size} attendance records have been approved. Teachers will be notified via email.`);
       setSelectedSubmissions(new Set());
       loadPendingBatches();
       loadData(); // Refresh the main attendance data
     } else {
-      toast({
-        title: "Approval Failed",
-        description: "Failed to approve attendance records.",
-        variant: "destructive"
-      });
+      toast.error("Failed to approve attendance records.");
     }
   };
 
   const handleRejectSelected = () => {
     if (selectedSubmissions.size === 0) {
-      toast({
-        title: "No Selection",
-        description: "Please select attendance records to reject.",
-        variant: "destructive"
-      });
+      toast.error("Please select attendance records to reject.");
       return;
     }
 
     const success = StorageService.rejectAttendanceSubmissions(
       Array.from(selectedSubmissions),
-      user?.id || 'admin'
+      String(user?.id || 'admin')
     );
 
     if (success) {
-      toast({
-        title: "Rejected Successfully",
-        description: `${selectedSubmissions.size} attendance records have been rejected.`,
-      });
+      toast.success(`${selectedSubmissions.size} attendance records have been rejected. Teachers will be notified via email.`);
       setSelectedSubmissions(new Set());
       loadPendingBatches();
     } else {
-      toast({
-        title: "Rejection Failed",
-        description: "Failed to reject attendance records.",
-        variant: "destructive"
-      });
+      toast.error("Failed to reject attendance records.");
     }
   };
 
@@ -467,14 +434,11 @@ export function AttendanceManagement() {
     const submissionIds = batch.submissions.map(s => s.id);
     const success = StorageService.approveAttendanceSubmissions(
       submissionIds,
-      user?.id || 'admin'
+      String(user?.id || 'admin')
     );
 
     if (success) {
-      toast({
-        title: "Batch Approved",
-        description: `All ${batch.totalStudents} records for ${batch.grade} on ${batch.date} have been approved.`,
-      });
+      toast.success(`All ${batch.totalStudents} records for ${batch.grade} on ${batch.date} have been approved. Teacher will be notified via email.`);
       loadPendingBatches();
       loadData();
     }
@@ -484,14 +448,11 @@ export function AttendanceManagement() {
     const submissionIds = batch.submissions.map(s => s.id);
     const success = StorageService.rejectAttendanceSubmissions(
       submissionIds,
-      user?.id || 'admin'
+      String(user?.id || 'admin')
     );
 
     if (success) {
-      toast({
-        title: "Batch Rejected",
-        description: `All ${batch.totalStudents} records for ${batch.grade} on ${batch.date} have been rejected.`,
-      });
+      toast.success(`All ${batch.totalStudents} records for ${batch.grade} on ${batch.date} have been rejected. Teacher will be notified via email.`);
       loadPendingBatches();
     }
   };
