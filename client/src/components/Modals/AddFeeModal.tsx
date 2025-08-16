@@ -46,11 +46,7 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students, prefillData }: A
   ];
 
   const classSections = [
-    'Class 1 Sec: A', 'Class 1 Sec: B', 'Class 2 Sec: A', 'Class 2 Sec: B',
-    'Class 3 Sec: A', 'Class 3 Sec: B', 'Class 4 Sec: A', 'Class 4 Sec: B',
-    'Class 5 Sec: A', 'Class 5 Sec: B', 'Class 6 Sec: A', 'Class 6 Sec: B',
-    'Class 7 Sec: A', 'Class 7 Sec: B', 'Class 8 Sec: A', 'Class 8 Sec: B',
-    'Class 9 Sec: A', 'Class 9 Sec: B', 'Class 10 Sec: A', 'Class 10 Sec: B'
+    'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'
   ];
 
   const paymentTypes = ['Cash', 'Online', 'Bank Transfer', 'Cheque', 'UPI'];
@@ -125,10 +121,9 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students, prefillData }: A
 
   const handleSearch = () => {
     if (searchData.classSection) {
-      // Filter students by class section
+      // Filter students by grade
       const filteredStudents = students.filter(student => {
-        const grade = searchData.classSection.split(' ')[1]; // Extract class number
-        return student.grade.includes(grade);
+        return student.grade === searchData.classSection;
       });
       
       if (filteredStudents.length > 0) {
@@ -263,8 +258,7 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students, prefillData }: A
                   {students
                     .filter(student => {
                       if (!searchData.classSection) return true;
-                      const grade = searchData.classSection.split(' ')[1];
-                      return student.grade.includes(grade);
+                      return student.grade === searchData.classSection;
                     })
                     .map(student => (
                     <SelectItem key={student.id} value={student.id.toString()}>
