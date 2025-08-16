@@ -46,7 +46,7 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students, prefillData }: A
   ];
 
   const classSections = [
-    'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'
+    '6th', '7th', '8th', '9th', '10th', '11th', '12th'
   ];
 
   const paymentTypes = ['Cash', 'Online', 'Bank Transfer', 'Cheque', 'UPI'];
