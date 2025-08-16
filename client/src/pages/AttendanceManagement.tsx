@@ -82,35 +82,35 @@ export function AttendanceManagement() {
       console.log('No students found, creating sample data');
       const sampleStudents = [
         { 
-          id: 1, name: 'Kavya Kapoor', rollNumber: '8-016', grade: '8th', 
+          id: 1, name: 'Kavya Kapoor', rollNumber: '8-016', grade: 'Grade 8', 
           phone: '9876543210', email: 'kavya@example.com', 
           parentEmail: 'kapoor@example.com', parentPhone: '9876543210',
           monthlyFee: 2500, status: 'active' as const,
           enrollmentDate: '2024-01-15'
         },
         { 
-          id: 2, name: 'Pari Mehta', rollNumber: '8-020', grade: '8th', 
+          id: 2, name: 'Pari Mehta', rollNumber: '8-020', grade: 'Grade 8', 
           phone: '9876543211', email: 'pari@example.com', 
           parentEmail: 'mehta@example.com', parentPhone: '9876543211',
           monthlyFee: 2500, status: 'active' as const,
           enrollmentDate: '2024-01-20'
         },
         { 
-          id: 3, name: 'Sai Singh', rollNumber: '9-005', grade: '9th', 
+          id: 3, name: 'Sai Singh', rollNumber: '9-005', grade: 'Grade 9', 
           phone: '9876543212', email: 'sai@example.com', 
           parentEmail: 'singh@example.com', parentPhone: '9876543212',
           monthlyFee: 2500, status: 'active' as const,
           enrollmentDate: '2024-02-01'
         },
         { 
-          id: 4, name: 'Arjun Sharma', rollNumber: '10-012', grade: '10th', 
+          id: 4, name: 'Arjun Sharma', rollNumber: '10-012', grade: 'Grade 10', 
           phone: '9876543213', email: 'arjun@example.com', 
           parentEmail: 'sharma@example.com', parentPhone: '9876543213',
           monthlyFee: 2500, status: 'active' as const,
           enrollmentDate: '2024-02-10'
         },
         { 
-          id: 5, name: 'Priya Gupta', rollNumber: '7-008', grade: '7th', 
+          id: 5, name: 'Priya Gupta', rollNumber: '7-008', grade: 'Grade 7', 
           phone: '9876543214', email: 'priya@example.com', 
           parentEmail: 'gupta@example.com', parentPhone: '9876543214',
           monthlyFee: 2500, status: 'active' as const,
@@ -477,7 +477,7 @@ export function AttendanceManagement() {
 
 
 
-  const grades = ['6th', '7th', '8th', '9th', '10th', '11th', '12th'];
+  const grades = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
   // Student image function (same as StudentManagement)
   const getStudentImage = (studentId: number) => {
