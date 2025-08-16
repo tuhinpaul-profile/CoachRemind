@@ -15,7 +15,8 @@ interface AddFeeModalProps {
 
 export function AddFeeModal({ isOpen, onClose, onAdd, students }: AddFeeModalProps) {
   const [formData, setFormData] = useState({
-    studentId: 0,
+    studentName: '',
+    grade: '',
     amount: 2500,
     dueDate: '',
     description: '',
@@ -24,14 +25,39 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students }: AddFeeModalPro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Find or create student with the entered name and grade
+    let student = students.find(s => s.name.toLowerCase() === formData.studentName.toLowerCase() && s.grade === formData.grade);
+    
+    if (!student) {
+      // If student doesn't exist, we'll need to create one
+      // For now, we'll use a temporary ID - this should be handled by the parent component
+      student = {
+        id: Date.now(), // Temporary ID
+        name: formData.studentName,
+        grade: formData.grade,
+        rollNumber: `TEMP-${Date.now()}`,
+        email: '',
+        phone: '',
+        parentEmail: '',
+        parentPhone: '',
+        monthlyFee: formData.amount,
+        status: 'active' as const,
+        enrollmentDate: new Date().toISOString().split('T')[0]
+      };
+    }
+    
     const fee: Omit<Fee, 'id'> = {
-      ...formData,
+      studentId: student!.id,
+      amount: formData.amount,
+      dueDate: formData.dueDate,
+      description: formData.description,
       status: 'pending',
     };
     
     onAdd(fee);
     setFormData({
-      studentId: 0,
+      studentName: '',
+      grade: '',
       amount: 2500,
       dueDate: '',
       description: '',
@@ -47,7 +73,7 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students }: AddFeeModalPro
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">Add Fee Record</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -57,17 +83,37 @@ export function AddFeeModal({ isOpen, onClose, onAdd, students }: AddFeeModalPro
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="studentId">Student</Label>
-            <Select value={formData.studentId.toString()} onValueChange={(value) => handleChange('studentId', parseInt(value))}>
-              <SelectTrigger data-testid="select-student">
-                <SelectValue placeholder="Select Student" />
+            <Label htmlFor="studentName">Student Name</Label>
+            <Input
+              id="studentName"
+              type="text"
+              value={formData.studentName}
+              onChange={(e) => handleChange('studentName', e.target.value)}
+              placeholder="Enter student name"
+              required
+              data-testid="input-student-name"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="grade">Grade</Label>
+            <Select value={formData.grade} onValueChange={(value) => handleChange('grade', value)}>
+              <SelectTrigger data-testid="select-grade">
+                <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
               <SelectContent>
-                {students.map(student => (
-                  <SelectItem key={student.id} value={student.id.toString()}>
-                    {student.name} ({student.grade})
-                  </SelectItem>
-                ))}
+                <SelectItem value="Grade 1">Grade 1</SelectItem>
+                <SelectItem value="Grade 2">Grade 2</SelectItem>
+                <SelectItem value="Grade 3">Grade 3</SelectItem>
+                <SelectItem value="Grade 4">Grade 4</SelectItem>
+                <SelectItem value="Grade 5">Grade 5</SelectItem>
+                <SelectItem value="Grade 6">Grade 6</SelectItem>
+                <SelectItem value="Grade 7">Grade 7</SelectItem>
+                <SelectItem value="Grade 8">Grade 8</SelectItem>
+                <SelectItem value="Grade 9">Grade 9</SelectItem>
+                <SelectItem value="Grade 10">Grade 10</SelectItem>
+                <SelectItem value="Grade 11">Grade 11</SelectItem>
+                <SelectItem value="Grade 12">Grade 12</SelectItem>
               </SelectContent>
             </Select>
           </div>
